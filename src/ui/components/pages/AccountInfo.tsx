@@ -68,13 +68,24 @@ class AccountInfoComponent extends React.Component {
     const { leaseBalance } = this.state;
     const showLease =
       leaseBalance && leaseBalance.gt(leaseBalance.cloneWithCoins(0));
-    const { address, name, publicKey, networkCode } = selectedAccount;
+    const {
+      address,
+      type: accType,
+      name,
+      publicKey,
+      networkCode,
+    } = selectedAccount;
 
     return (
       <div className={styles.content}>
         <div className={styles.header}>
           <div className={`flex ${styles.wallet}`}>
-            <Avatar className={styles.avatar} address={address} size={48} />
+            <Avatar
+              className={styles.avatar}
+              address={address}
+              type={accType}
+              size={48}
+            />
             <div className={styles.accountData}>
               <div>
                 <Button
