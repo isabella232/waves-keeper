@@ -33,6 +33,7 @@ import { ImportSeed } from './components/pages/importSeed';
 import { Swap } from './components/pages/swap/swap';
 import { ExportAccounts } from './components/pages/exportAccounts/exportAccounts';
 import { ImportKeystore } from './components/pages/importKeystore/importKeystore';
+import { ImportEmail } from './components/pages/importEmail/importEmail';
 import { OtherAccountsPage } from './components/pages/otherAccounts';
 import { Send } from './components/pages/send';
 
@@ -49,6 +50,7 @@ export const PAGES = {
   ACCOUNT_NAME_SEED: 'account_name_seed',
   SAVE_BACKUP: 'safe_backup',
   CONFIRM_BACKUP: 'confirm_backup',
+  IMPORT_EMAIL: 'import_email',
   IMPORT_KEYSTORE: 'import_keystore',
   IMPORT_SEED: 'import_seed',
   IMPORT_SEED_BACK: 'import_seed_back',
@@ -224,6 +226,17 @@ export const PAGES_CONF = {
       hasLogo: true,
       hasSettings: false,
       back: PAGES.SAVE_BACKUP,
+    },
+  },
+  [PAGES.IMPORT_EMAIL]: {
+    component: ImportEmail,
+    bottom: {
+      hide: true,
+    },
+    menu: {
+      hasLogo: true,
+      hasSettings: false,
+      back: true,
     },
   },
   [PAGES.IMPORT_KEYSTORE]: {

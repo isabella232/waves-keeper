@@ -1,0 +1,10 @@
+.codeWrapper {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 10px;
+}
+
+.codeInput {
+    width: 38px;
+    height: 38px;
+}

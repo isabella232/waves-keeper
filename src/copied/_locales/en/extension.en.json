@@ -253,7 +253,23 @@
     "createNew": "Create a new account",
     "importVia": "Or import via",
     "viaKeystore": "Keystore File",
-    "viaSeed": "Seed Phrase or Private Key"
+    "viaSeed": "Seed Phrase or Private Key",
+    "viaEmail": "Email Account"
+  },
+  "importEmail": {
+    "importEmailTitle": "Import Email Account",
+    "importEmailDesc": "Connect an email account created on Waves.Exchange",
+    "passwordLabel": "Password",
+    "emailLabel": "Email",
+    "credentialsError": "Incorrect username or password",
+    "continue": "Continue",
+    "forgotPassword": "Forgot password?",
+    "dontHaveAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "verifyAccountTitle": "Verify Your Account",
+    "verifyAccountDesc": "Please enter the 6-digit verification code received by {{destination}}",
+    "incorrectCode": "Wrong code. Please, try again",
+    "alreadyExists": "Account already exists"
   },
   "importKeystore": {
     "browse": "Browse...",
