@@ -4,45 +4,37 @@ import { CodeConfirmation } from './codeConfirmation';
 import {
   AuthChallenge,
   CodeDelivery,
-  IdentityService,
+  IdentityUser,
 } from '../../../../lib/IdentityService';
 import { getGeeTestToken } from './geeTest';
-import { Seed } from '@waves/waves-transactions/dist/seedUtils';
-
-export interface IUser {
-  username: string;
-  address: string;
-  publicKey: string;
-  seed: Seed;
-}
+import background from '../../../services/Background';
 
 type LoginStateType = 'sign-in' | 'confirm-sign-in';
 
 type LoginProps = {
   className: string;
-  identity: IdentityService;
-  onConfirm(user: IUser): void;
+  onConfirm(user: IdentityUser): void;
 };
 
-export function Login({ className = '', identity, onConfirm }: LoginProps) {
+export function Login({ className = '', /*identity,*/ onConfirm }: LoginProps) {
   const [loginState, setLoginState] = React.useState<LoginStateType>('sign-in');
   const [codeDelivery, setCodeDelivery] = React.useState<CodeDelivery>();
   const [is2FAEnabled, setIs2FAEnabled] = React.useState(false);
   const userData = React.useRef<{ username: string; password: string }>();
 
   const handleSuccess = React.useCallback(() => {
-    onConfirm({
-      username: identity.getUsername(),
-      address: identity.getUserAddress(),
-      publicKey: identity.getUserPublicKey(),
-      seed: identity.seed,
-    });
-  }, [identity, is2FAEnabled, onConfirm]);
+    background.identityUser().then(onConfirm);
+  }, [is2FAEnabled, onConfirm]);
 
   const signIn = React.useCallback(
     async (username: string, password: string): Promise<void> => {
-      const geeTest = await getGeeTestToken(identity.geetestUrl);
-      const cognitoUser = await identity.signIn(username, password, geeTest);
+      const config = await background.identityConfig();
+      const geeTest = await getGeeTestToken(config.identity.geetest.url);
+      const cognitoUser = await background.identitySignIn(
+        username,
+        password,
+        geeTest
+      );
       const challengeName: AuthChallenge | void = (cognitoUser as any)
         .challengeName;
 
@@ -59,13 +51,13 @@ export function Login({ className = '', identity, onConfirm }: LoginProps) {
           handleSuccess();
       }
     },
-    [handleSuccess, identity]
+    [handleSuccess]
   );
 
   const confirmSignIn = React.useCallback(
     async (code: string): Promise<void> => {
       try {
-        await identity.confirmSignIn(code, 'SOFTWARE_TOKEN_MFA');
+        await background.identityConfirmSignIn(code);
         handleSuccess();
       } catch (e) {
         if (e && e.code === 'NotAuthorizedException' && userData.current) {
@@ -75,7 +67,7 @@ export function Login({ className = '', identity, onConfirm }: LoginProps) {
         }
       }
     },
-    [codeDelivery, handleSuccess, identity, signIn]
+    [codeDelivery, handleSuccess, signIn]
   );
 
   React.useEffect(() => {

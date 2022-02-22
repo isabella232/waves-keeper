@@ -5,9 +5,8 @@ import { Error } from '../../ui';
 
 import { Trans } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../../store';
-import { IdentityService } from '../../../../lib/IdentityService';
-import { loadConfig } from '../../../../lib/configService';
-import { IUser, Login } from './login';
+import { IdentityUser } from '../../../../lib/IdentityService';
+import { Login } from './login';
 import { newAccountSelect } from '../../../actions';
 import { PAGES } from '../../../pageConfig';
 
@@ -28,22 +27,9 @@ interface Props {
 export function ImportEmail({ setTab }: Props) {
   const dispatch = useAppDispatch();
   const accounts = useAppSelector(state => state.accounts);
-  const networkId = useAppSelector(state => state.currentNetwork);
-  const chainId = idByNetwork[networkId].charCodeAt(0);
   const [alreadyExists, setAlreadyExists] = React.useState<boolean>(false);
-  const identity = React.useRef<IdentityService>(new IdentityService());
 
   React.useEffect(() => {
-    loadConfig(chainId).then(config => {
-      identity.current.configure({
-        apiUrl: config.identity.apiUrl,
-        clientId: config.identity.cognito.clientId,
-        userPoolId: config.identity.cognito.userPoolId,
-        endpoint: config.identity.cognito.endpoint,
-        geetestUrl: config.identity.geetest.url,
-      });
-    });
-
     const script = document.createElement('script');
     script.src = 'geeTestCode.js';
     script.async = true;
@@ -53,7 +39,7 @@ export function ImportEmail({ setTab }: Props) {
   }, []);
 
   const handleConfirm = React.useCallback(
-    (userData: IUser) => {
+    (userData: IdentityUser) => {
       if (accounts.find(({ address }) => address === userData.address)) {
         setAlreadyExists(true);
         return;
@@ -84,11 +70,7 @@ export function ImportEmail({ setTab }: Props) {
         <Trans i18nKey="importEmail.importEmailDesc" />
       </p>
 
-      <Login
-        className="margin4"
-        identity={identity.current}
-        onConfirm={handleConfirm}
-      />
+      <Login className="margin4" onConfirm={handleConfirm} />
 
       <Error className="center" show={alreadyExists}>
         <Trans i18nKey="importEmail.alreadyExists" />

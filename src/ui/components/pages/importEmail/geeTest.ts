@@ -1,12 +1,12 @@
 const w = window as any;
 
-export const getGeeTestToken = (
-  geetestUrl: string
-): Promise<{
+export interface GeeTest {
   geetest_challenge: string;
   geetest_seccode: string;
   geetest_validate: string;
-}> => {
+}
+
+export const getGeeTestToken = (geetestUrl: string): Promise<GeeTest> => {
   return new Promise(async (res, rej) => {
     try {
       const response = await fetch(geetestUrl, {

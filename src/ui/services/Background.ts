@@ -1,5 +1,8 @@
 import { IAssetInfo } from '@waves/data-entities/dist/entities/Asset';
 import { ExchangePool } from 'ui/components/pages/swap/channelClient';
+import { GeeTest } from '../components/pages/importEmail/geeTest';
+import { Config } from '../../lib/configService';
+import { CognitoUser } from 'amazon-cognito-identity-js';
 
 function prepareErrorMessage(err: any) {
   return err && err.message ? err.message : String(err);
@@ -464,6 +467,46 @@ class Background {
     try {
       await this.initPromise;
       return await this.background.shouldIgnoreError(context, message);
+    } catch (err) {
+      throw new Error(prepareErrorMessage(err));
+    }
+  }
+
+  async identityConfig(): Promise<Config> {
+    try {
+      await this.initPromise;
+      return await this.background.identityConfig();
+    } catch (err) {
+      throw new Error(prepareErrorMessage(err));
+    }
+  }
+
+  async identitySignIn(
+    username: string,
+    password: string,
+    geeTest: GeeTest
+  ): Promise<CognitoUser> {
+    try {
+      await this.initPromise;
+      return await this.background.identitySignIn(username, password, geeTest);
+    } catch (err) {
+      throw new Error(prepareErrorMessage(err));
+    }
+  }
+
+  async identityConfirmSignIn(code: string) {
+    try {
+      await this.initPromise;
+      return await this.background.identityConfirmSignIn(code);
+    } catch (err) {
+      throw new Error(prepareErrorMessage(err));
+    }
+  }
+
+  async identityUser() {
+    try {
+      await this.initPromise;
+      return await this.background.identityUser();
     } catch (err) {
       throw new Error(prepareErrorMessage(err));
     }

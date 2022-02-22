@@ -19,6 +19,7 @@ import {
   AssetInfoController,
   CurrentAccountController,
   ExternalDeviceController,
+  IdentityController,
   IdleController,
   MessageController,
   NetworkController,
@@ -405,6 +406,12 @@ class BackgroundService extends EventEmitter {
       walletController: this.walletController,
     });
 
+    this.indentityController = new IdentityController({
+      getNetworkCode: this.networkController.getNetworkCode.bind(
+        this.networkController
+      ),
+    });
+
     // Single state composed from states of all controllers
     this.store.updateStructure({
       StatisticsController: this.statisticsController.store,
@@ -596,6 +603,16 @@ class BackgroundService extends EventEmitter {
 
       shouldIgnoreError: async (context, message) =>
         this.remoteConfigController.shouldIgnoreError(context, message),
+
+      identityConfig: async () => this.indentityController.getConfig(),
+
+      identitySignIn: async (username, password, geeTest) =>
+        this.indentityController.signIn(username, password, geeTest),
+
+      identityConfirmSignIn: async code =>
+        this.indentityController.confirmSignIn(code),
+
+      identityUser: async () => this.indentityController.identityUser(),
     };
   }
 

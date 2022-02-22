@@ -9,7 +9,7 @@ import {
   ISignUpResult,
 } from 'amazon-cognito-identity-js';
 
-type IdentityUser = {
+export type IdentityUser = {
   address: string;
   publicKey: string;
   username: string;
@@ -45,7 +45,7 @@ export class IdentityService {
   userPool: CognitoUserPool | undefined = undefined;
   // private currentUser: CognitoUser | undefined = undefined;
   currentUser: CognitoUser | undefined = undefined;
-  private identityUser: IdentityUser | undefined = undefined;
+  identityUser: IdentityUser | undefined = undefined;
   private username = '';
   private readonly seed = seedUtils.Seed.create();
   private apiUrl = '';
