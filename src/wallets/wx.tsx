@@ -69,8 +69,6 @@ export class WxWallet extends Wallet<WxWalletData> {
   }
 
   async signTx(tx: TSignData): Promise<string> {
-    await this.identity.restoreSession();
-
     const signable = this._adapter.makeSignable(tx);
     const bytes = await signable.getBytes();
 

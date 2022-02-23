@@ -613,7 +613,7 @@ class BackgroundService extends EventEmitter {
       identityConfirmSignIn: async code =>
         this.indentityController.confirmSignIn(code),
 
-      identityUser: async () => this.indentityController.identityUser(),
+      identityUser: async () => this.indentityController.getIdentityUser(),
     };
   }
 

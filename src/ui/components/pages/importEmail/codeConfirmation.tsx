@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { VerifyCodeComponent } from './verifyCodeComponent';
-import { CodeDelivery } from '../../../../lib/IdentityService';
 import { Trans } from 'react-i18next';
 import cn from 'classnames';
+import { CodeDelivery } from '../../../../controllers/IdentityController';
 
 type CodeConfirmationProps = {
   codeDelivery: CodeDelivery | undefined;

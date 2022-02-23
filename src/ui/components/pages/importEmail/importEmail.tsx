@@ -2,10 +2,10 @@ import * as React from 'react';
 import * as styles from './importEmail.module.css';
 import cn from 'classnames';
 import { Error } from '../../ui';
+import { IdentityUser } from '../../../../controllers/IdentityController';
 
 import { Trans } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../../store';
-import { IdentityUser } from '../../../../lib/IdentityService';
 import { Login } from './login';
 import { newAccountSelect } from '../../../actions';
 import { PAGES } from '../../../pageConfig';

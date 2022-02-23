@@ -5,7 +5,7 @@ import {
   AuthChallenge,
   CodeDelivery,
   IdentityUser,
-} from '../../../../lib/IdentityService';
+} from '../../../../controllers/IdentityController';
 import { getGeeTestToken } from './geeTest';
 import background from '../../../services/Background';
 
