@@ -407,7 +407,7 @@ class BackgroundService extends EventEmitter {
     });
 
     this.indentityController = new IdentityController({
-      getNetworkCode: this.networkController.getNetworkCode.bind(
+      getNetwork: this.networkController.getNetwork.bind(
         this.networkController
       ),
     });

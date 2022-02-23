@@ -1,48 +1,96 @@
 import { IdentityService } from '../lib/IdentityService';
-import { Config, loadConfig } from '../lib/configService';
 import { CognitoUser } from 'amazon-cognito-identity-js';
 import { GeeTest } from '../ui/components/pages/importEmail/geeTest';
 
-interface Options {
-  getNetworkCode: () => string;
-}
+export type Config = {
+  identity: {
+    apiUrl: string;
+    cognito: {
+      clientId: string;
+      userPoolId: string;
+      endpoint: string;
+    };
+    geetest: {
+      url: string;
+    };
+  };
+};
 
-const MAINNET = 87;
-const TESTNET = 84;
+type ConfigUrls = {
+  url: string;
+  featuresConfigUrl: string;
+  notificationsUrl: string;
+  updatesUrl: string;
+  leasing: string;
+  feeConfigUrl: string;
+};
+
+type NetworkConfig = {
+  name: string;
+  configService: ConfigUrls;
+};
+
+type IdentityNetworks = 'mainnet' | 'testnet';
+type AllNetworks = 'mainnet' | 'testnet' | 'stagenet' | 'custom';
+
+type IdentityConfig = Partial<{
+  [K in IdentityNetworks]: Config;
+}>;
+
+interface Options {
+  getNetwork: () => AllNetworks;
+}
 
 export class IdentityController {
   private identity: IdentityService;
-  private getNetworkCode: Options['getNetworkCode'];
-  protected networkByte: number;
-  protected identityConfig: { [MAINNET]?: Config; [TESTNET]?: Config } = {};
+  protected getNetwork: () => IdentityNetworks;
+  protected network: AllNetworks;
+  private networks: IdentityNetworks[] = ['mainnet', 'testnet'];
+  protected config: IdentityConfig = {};
 
   constructor(opts: Options) {
-    this.getNetworkCode = opts.getNetworkCode;
+    this.getNetwork = () =>
+      opts.getNetwork() === 'testnet' ? 'testnet' : 'mainnet';
+
     // prefetch identity configuration for networks
-    Promise.all([MAINNET, TESTNET].map(networkByte => loadConfig(networkByte)))
-      .then(([mainnet, testnet]) => {
-        this.identityConfig[MAINNET] = mainnet;
-        this.identityConfig[TESTNET] = testnet;
+    Promise.all(this.networks.map(network => this.loadConfig(network)))
+      .then(configs => {
+        this.networks.forEach((network, i) => {
+          this.config[network] = configs[i];
+        });
       })
-      .then(() => this.configure(this.getNetworkByte()));
+      .then(() => this.configure(this.getNetwork()));
   }
 
-  private getNetworkByte() {
-    return this.getNetworkCode().charCodeAt(0);
+  private async loadConfig(network: AllNetworks): Promise<Config> {
+    const wavesNetworksResponse = await fetch(
+      'https://configs.waves.exchange/web/networks.json'
+    );
+    const wavesNetworks: NetworkConfig[] = await wavesNetworksResponse.json();
+    const envNetworkConfig = wavesNetworks.find(c => c.name === network);
+
+    if (!envNetworkConfig) {
+      throw new Error(`No network configuration found for ${network}`);
+    }
+
+    const featuresConfigResponse = await fetch(
+      `${envNetworkConfig.configService.url}/${envNetworkConfig.configService.featuresConfigUrl}`
+    );
+    return await featuresConfigResponse.json();
   }
 
   async getConfig() {
-    await this.configure(this.getNetworkByte());
-    return this.identityConfig[this.networkByte];
+    // TODO reconfigure on account switch
+    await this.configure(this.getNetwork());
+    return this.config[this.network];
   }
 
-  private async configure(networkByte: number) {
-    if (!this.identity || this.networkByte != networkByte) {
-      this.networkByte = this.getNetworkCode().charCodeAt(0);
-
+  private async configure(network: AllNetworks) {
+    if (!this.identity || this.network != network) {
+      this.network = this.getNetwork();
       this.identity = new IdentityService();
 
-      const config = await this.identityConfig[networkByte];
+      const config = await this.config[network];
       this.identity.configure({
         apiUrl: config.identity.apiUrl,
         clientId: config.identity.cognito.clientId,
