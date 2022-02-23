@@ -1,5 +1,5 @@
 import { IdentityService } from '../lib/IdentityService';
-import { CognitoUser } from 'amazon-cognito-identity-js';
+import { CognitoUser, CognitoUserSession } from 'amazon-cognito-identity-js';
 import { GeeTest } from '../ui/components/pages/importEmail/geeTest';
 
 export type Config = {
@@ -79,12 +79,6 @@ export class IdentityController {
     return await featuresConfigResponse.json();
   }
 
-  async getConfig() {
-    // TODO reconfigure on account switch
-    await this.configure(this.getNetwork());
-    return this.config[this.network];
-  }
-
   private async configure(network: AllNetworks) {
     if (!this.identity || this.network != network) {
       this.network = this.getNetwork();
@@ -99,6 +93,12 @@ export class IdentityController {
         geetestUrl: config.identity.geetest.url,
       });
     }
+  }
+
+  async getConfig() {
+    // TODO reconfigure on account switch
+    await this.configure(this.getNetwork());
+    return this.config[this.network];
   }
 
   async signIn(
@@ -122,5 +122,21 @@ export class IdentityController {
       publicKey: this.identity.getUserPublicKey(),
       username: this.identity.getUsername(),
     };
+  }
+
+  async restoreSession(): Promise<CognitoUserSession> {
+    // restores user session tokens from storage
+    return new Promise((resolve, reject) => {
+      this.identity.currentUser.getSession((err, session) => {
+        if (err) {
+          reject(err);
+        }
+        resolve(session);
+      });
+    });
+  }
+
+  async signBytes(bytes: Array<number> | Uint8Array) {
+    return this.identity.signBytes(bytes);
   }
 }

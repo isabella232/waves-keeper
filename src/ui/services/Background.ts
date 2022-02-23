@@ -1,7 +1,7 @@
 import { IAssetInfo } from '@waves/data-entities/dist/entities/Asset';
 import { ExchangePool } from 'ui/components/pages/swap/channelClient';
 import { GeeTest } from '../components/pages/importEmail/geeTest';
-import { Config } from '../../lib/configService';
+import { Config } from '../../controllers/IdentityController';
 import { CognitoUser } from 'amazon-cognito-identity-js';
 
 function prepareErrorMessage(err: any) {

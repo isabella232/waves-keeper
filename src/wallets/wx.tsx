@@ -7,9 +7,7 @@ import * as create from 'parse-json-bignumber';
 import { convertInvokeListWorkAround } from './utils';
 import { InfoAdapter } from '../controllers/MessageController';
 import { convert } from '@waves/money-like-to-node';
-import { IdentityService } from '../lib/IdentityService';
-import { loadConfig } from '../lib/configService';
-import { CognitoUserSession } from 'amazon-cognito-identity-js';
+import { IdentityController } from '../controllers';
 
 const { stringify } = create({ BigNumber });
 
@@ -18,6 +16,7 @@ export interface WxWalletInput {
   network: NetworkName;
   networkCode: string;
   publicKey: string;
+  identity: IdentityController;
 }
 
 interface WxWalletData extends Account {
@@ -26,9 +25,15 @@ interface WxWalletData extends Account {
 
 export class WxWallet extends Wallet<WxWalletData> {
   private readonly _adapter: InfoAdapter;
-  identity: IdentityService = new IdentityService();
+  private identity: IdentityController;
 
-  constructor({ name, network, networkCode, publicKey }: WxWalletInput) {
+  constructor({
+    name,
+    network,
+    networkCode,
+    publicKey,
+    identity,
+  }: WxWalletInput) {
     super({
       address: libCrypto.address({ publicKey }, networkCode),
       name,
@@ -39,29 +44,11 @@ export class WxWallet extends Wallet<WxWalletData> {
     });
 
     this._adapter = new InfoAdapter(this.data);
+    this.identity = identity;
 
-    loadConfig(networkCode.charCodeAt(0)).then(config => {
-      this.identity.configure({
-        apiUrl: config.identity.apiUrl,
-        clientId: config.identity.cognito.clientId,
-        userPoolId: config.identity.cognito.userPoolId,
-        endpoint: config.identity.cognito.endpoint,
-        geetestUrl: config.identity.geetest.url,
-      });
-
-      this.identity.currentUser = this.identity.userPool.getCurrentUser();
-      this.restoreSession();
-    });
-  }
-
-  async restoreSession(): Promise<CognitoUserSession> {
-    return await new Promise((resolve, reject) => {
-      this.identity.currentUser.getSession((err, session) => {
-        if (err) {
-          reject(err);
-        }
-        resolve(session);
-      });
+    this.identity.getConfig().then(() => {
+      this.identity.identity.currentUser =
+        this.identity.identity.userPool.getCurrentUser();
     });
   }
 
@@ -82,6 +69,8 @@ export class WxWallet extends Wallet<WxWalletData> {
   }
 
   async signTx(tx: TSignData): Promise<string> {
+    await this.identity.restoreSession();
+
     const signable = this._adapter.makeSignable(tx);
     const bytes = await signable.getBytes();
 

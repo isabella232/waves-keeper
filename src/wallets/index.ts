@@ -2,13 +2,15 @@ import { SeedWallet, SeedWalletInput } from './seed';
 import { EncodedSeedWallet, EncodedSeedWalletInput } from './encodedSeed';
 import { PrivateKeyWallet, PrivateKeyWalletInput } from './privateKey';
 import { WxWallet, WxWalletInput } from './wx';
+import { IdentityController } from '../controllers';
 
 export function createWallet(
   input:
     | ({ type: 'seed' } & SeedWalletInput)
     | ({ type: 'encodedSeed' } & EncodedSeedWalletInput)
     | ({ type: 'privateKey' } & PrivateKeyWalletInput)
-    | ({ type: 'wx' } & WxWalletInput)
+    | ({ type: 'wx' } & WxWalletInput),
+  identity: IdentityController
 ) {
   switch (input.type) {
     case 'seed':
@@ -38,6 +40,7 @@ export function createWallet(
         network: input.network,
         networkCode: input.networkCode,
         publicKey: input.publicKey,
+        identity,
       });
     default:
       throw new Error(`Unsupported wallet type: "${(input as any).type}"`);

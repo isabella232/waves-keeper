@@ -280,6 +280,12 @@ class BackgroundService extends EventEmitter {
       initState: initState.UiStateController,
     });
 
+    this.indentityController = new IdentityController({
+      getNetwork: this.networkController.getNetwork.bind(
+        this.networkController
+      ),
+    });
+
     // Wallet. Wallet creation, app locking, signing method
     this.walletController = new WalletController({
       initState: initState.WalletController,
@@ -293,6 +299,7 @@ class BackgroundService extends EventEmitter {
         this.networkController
       ),
       trash: this.trash,
+      identity: this.indentityController,
     });
 
     this.walletController.store.subscribe(state => {
@@ -404,12 +411,6 @@ class BackgroundService extends EventEmitter {
       networkController: this.networkController,
       preferencesController: this.preferencesController,
       walletController: this.walletController,
-    });
-
-    this.indentityController = new IdentityController({
-      getNetwork: this.networkController.getNetwork.bind(
-        this.networkController
-      ),
     });
 
     // Single state composed from states of all controllers

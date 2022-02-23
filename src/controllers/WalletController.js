@@ -30,6 +30,7 @@ export class WalletController {
     this.getNetworks = options.getNetworks;
     this.getNetworkCode = options.getNetworkCode;
     this.trashControl = options.trash;
+    this.identity = options.identity;
   }
 
   // Public
@@ -39,7 +40,13 @@ export class WalletController {
     const networkCode =
       options.networkCode || this.getNetworkCode(options.network);
 
-    const wallet = createWallet({ ...options, networkCode });
+    const wallet = createWallet(
+      {
+        ...options,
+        networkCode,
+      },
+      this.identity
+    );
 
     this._checkForDuplicate(wallet.getAccount().address, options.network);
 
@@ -150,6 +157,7 @@ export class WalletController {
   /**
    * Returns encrypted with current password account seed
    * @param {string} address - wallet address
+   * @param network
    * @returns {string} encrypted seed
    */
   encryptedSeed(address, network) {
@@ -215,7 +223,7 @@ export class WalletController {
       return data;
     });
 
-    this.wallets = walletsData.map(user => createWallet(user));
+    this.wallets = walletsData.map(user => createWallet(user, this.identity));
     this._saveWallets();
   }
 
@@ -245,6 +253,7 @@ export class WalletController {
    * Signs transaction
    * @param {string} address - wallet address
    * @param {array} bytes - array of bytes
+   * @param network
    * @returns {Promise<string>} signed transaction as json string
    */
   async signBytes(address, bytes, network) {
@@ -256,6 +265,7 @@ export class WalletController {
    * Signs request
    * @param {string} address - wallet address
    * @param {object} request - transaction to sign
+   * @param network
    * @returns {Promise<string>} signature
    */
   async signRequest(address, request, network) {
@@ -267,6 +277,7 @@ export class WalletController {
    * Signs request
    * @param {string} address - wallet address
    * @param {object} authData - object, representing auth request
+   * @param network
    * @returns {Promise<object>} object, representing auth response
    */
   async auth(address, authData, network) {
@@ -317,7 +328,7 @@ export class WalletController {
 
   _restoreWallets(password) {
     const decryptedData = decrypt(this.store.getState().vault, password);
-    this.wallets = decryptedData.map(user => createWallet(user));
+    this.wallets = decryptedData.map(user => createWallet(user, this.identity));
   }
 
   _findWallet(address, network) {
