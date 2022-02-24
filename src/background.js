@@ -312,6 +312,7 @@ class BackgroundService extends EventEmitter {
     this.walletController.store.subscribe(() => {
       const accounts = this.walletController.getAccounts();
       this.preferencesController.syncAccounts(accounts);
+      this.currentAccountController.updateBalances();
     });
 
     this.networkController.store.subscribe(() =>
