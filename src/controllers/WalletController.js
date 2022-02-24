@@ -18,12 +18,8 @@ function decrypt(ciphertext, password) {
 
 export class WalletController {
   constructor(options = {}) {
-    const defaults = {
-      initialized: false,
-    };
-    const initState = Object.assign({}, defaults, options.initState);
-    this.store = new ObservableStore(initState);
-    this.store.updateState({ locked: true });
+    // TODO on extension update remove locked/initialized flags
+    this.store = new ObservableStore(options.initState);
     this.password = null;
     this.wallets = [];
     this.getNetwork = options.getNetwork;
@@ -35,8 +31,6 @@ export class WalletController {
 
   // Public
   addWallet(options) {
-    if (this.store.getState().locked) throw new Error('App is locked');
-
     const networkCode =
       options.networkCode || this.getNetworkCode(options.network);
 
@@ -55,7 +49,6 @@ export class WalletController {
   }
 
   removeWallet(address, network) {
-    if (this.store.getState().locked) throw new Error('App is locked');
     const wallet = this.getWalletsByNetwork(network).find(
       wallet => wallet.getAccount().address === address
     );
@@ -71,22 +64,16 @@ export class WalletController {
   }
 
   lock() {
+    console.log('wallet locked');
     this.password = null;
     this.wallets = [];
-    if (!this.store.getState().locked) {
-      this.store.updateState({ locked: true });
-    }
   }
 
   unlock(password) {
+    console.log('wallet unlocked');
     this._restoreWallets(password);
     this.password = password;
     this._migrateWalletsNetwork();
-    this.store.updateState({ locked: false });
-  }
-
-  isLocked() {
-    return this.store.getState().locked;
   }
 
   initVault(password) {
@@ -97,18 +84,13 @@ export class WalletController {
     this.password = password;
     this.wallets = [];
     this._saveWallets();
-    this.store.updateState({ locked: false, initialized: true });
   }
 
   deleteVault() {
     (this.wallets || []).forEach(wallet => this._walletToTrash(wallet));
     this.password = null;
     this.wallets = [];
-    this.store.updateState({
-      locked: true,
-      initialized: false,
-      vault: undefined,
-    });
+    this.store.updateState({ vault: undefined });
   }
 
   newPassword(oldPassword, newPassword) {
@@ -332,7 +314,6 @@ export class WalletController {
   }
 
   _findWallet(address, network) {
-    if (this.store.getState().locked) throw new Error('App is locked');
     const wallet = this.getWalletsByNetwork(network).find(
       wallet => wallet.getAccount().address === address
     );

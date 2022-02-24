@@ -87,27 +87,43 @@ export class IdentityController {
   private networks: IdentityNetworks[] = ['mainnet', 'testnet'];
   protected config: IdentityConfig = {};
   // identity properties
-  public geetestUrl = '';
-  private readonly storage: ICognitoStorage = window.localStorage;
+  private storage: ICognitoStorage = window.localStorage;
   private userPool: CognitoUserPool | undefined = undefined;
   private currentUser: CognitoUser | undefined = undefined;
   private identityUser: IdentityUser | undefined = undefined;
   private username = '';
   private readonly seed = seedUtils.Seed.create();
   private apiUrl = '';
+  public geetestUrl = '';
 
   constructor(opts: Options) {
     this.getNetwork = () =>
       opts.getNetwork() === 'testnet' ? 'testnet' : 'mainnet';
 
     // prefetch identity configuration for networks
-    Promise.all(this.networks.map(network => this.loadConfig(network)))
-      .then(configs => {
+    Promise.all(this.networks.map(network => this.loadConfig(network))).then(
+      configs => {
         this.networks.forEach((network, i) => {
           this.config[network] = configs[i];
         });
-      })
-      .then(() => this.configure(this.getNetwork()));
+      }
+    );
+  }
+
+  lock() {
+    console.log('identity locked');
+    this.apiUrl = '';
+    this.storage = undefined;
+    this.userPool = undefined;
+    this.currentUser = undefined;
+    this.geetestUrl = '';
+  }
+
+  unlock(password: string) {
+    console.log('identity unlocked');
+    // todo decrypt this.storage
+    this.storage = window.localStorage;
+    this.configure(this.getNetwork());
   }
 
   private async loadConfig(network: AllNetworks): Promise<Config> {

@@ -43,6 +43,7 @@ import { setupDnode } from './lib/dnode-util';
 import { WindowManager } from './lib/WindowManger';
 import { verifyCustomData } from '@waves/waves-transactions';
 import { getAdapterByType } from '@waves/signature-adapter';
+import { VaultController } from './controllers/VaultController';
 
 const version = extension.runtime.getManifest().version;
 
@@ -302,18 +303,18 @@ class BackgroundService extends EventEmitter {
       identity: this.indentityController,
     });
 
-    this.walletController.store.subscribe(state => {
-      if (!state.locked || !state.initialized) {
-        const accounts = this.walletController.getAccounts();
-        this.preferencesController.syncAccounts(accounts);
-      }
+    this.vaultController = new VaultController({
+      initState: initState.SessionController,
+      wallet: this.walletController,
+      identity: this.indentityController,
+    });
+
+    this.walletController.store.subscribe(() => {
+      const accounts = this.walletController.getAccounts();
+      this.preferencesController.syncAccounts(accounts);
     });
 
     this.networkController.store.subscribe(() =>
-      this.currentAccountController.updateBalances()
-    );
-
-    this.walletController.store.subscribe(() =>
       this.currentAccountController.updateBalances()
     );
 
@@ -343,7 +344,7 @@ class BackgroundService extends EventEmitter {
       getSelectedAccount: this.preferencesController.getSelectedAccount.bind(
         this.preferencesController
       ),
-      isLocked: this.walletController.isLocked.bind(this.walletController),
+      isLocked: this.vaultController.isLocked.bind(this.vaultController),
       assetInfoController: this.assetInfoController,
     });
 
@@ -427,6 +428,7 @@ class BackgroundService extends EventEmitter {
       RemoteConfigController: this.remoteConfigController.store,
       NotificationsController: this.notificationsController.store,
       TrashController: this.trash.store,
+      SessionController: this.vaultController.store,
     });
 
     // Call send update, which is bound to ui EventEmitter, on every store update
@@ -475,16 +477,15 @@ class BackgroundService extends EventEmitter {
       addWallet: async account => this.walletController.addWallet(account),
       removeWallet: async (address, network) =>
         this.walletController.removeWallet(address, network),
-      lock: async () => this.walletController.lock(),
-      unlock: async password => this.walletController.unlock(password),
+      lock: async () => this.vaultController.lock(),
+      unlock: async password => this.vaultController.unlock(password),
       initVault: async password => {
-        const result = await this.walletController.initVault(password);
+        this.vaultController.init(password);
         this.statisticsController.addEvent('initVault');
-        return result;
       },
       deleteVault: async () => {
         await this.messageController.clearMessages();
-        await this.walletController.deleteVault();
+        await this.vaultController.clear();
       },
       newPassword: async (oldPassword, newPassword) =>
         this.walletController.newPassword(oldPassword, newPassword),
