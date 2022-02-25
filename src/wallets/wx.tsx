@@ -45,11 +45,6 @@ export class WxWallet extends Wallet<WxWalletData> {
 
     this._adapter = new InfoAdapter(this.data);
     this.identity = identity;
-
-    this.identity.getConfig().then(() => {
-      this.identity.identity.currentUser =
-        this.identity.identity.userPool.getCurrentUser();
-    });
   }
 
   getSeed(): string {

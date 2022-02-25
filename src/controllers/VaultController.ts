@@ -47,6 +47,7 @@ export class VaultController {
 
   init(password: string) {
     this.wallet.initVault(password);
+    this.identity.initVault(password);
 
     this.password = password;
     this.locked = false;

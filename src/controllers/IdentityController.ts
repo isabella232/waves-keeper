@@ -87,23 +87,65 @@ interface Options {
   initState: IdentityState;
 }
 
-class IdentityStorage implements ICognitoStorage {
-  private dataMemory = {};
+function encrypt(object, password: string): string {
+  const jsonObj = JSON.stringify(object);
+  return seedUtils.encryptSeed(jsonObj, password);
+}
+
+function decrypt(encryptedText: string, password: string): any {
+  try {
+    if (!encryptedText) {
+      return {};
+    }
+    const decryptedJson = seedUtils.decryptSeed(encryptedText, password);
+    return JSON.parse(decryptedJson);
+  } catch (e) {
+    throw new Error('Invalid password');
+  }
+}
+
+class IdentityStorage extends ObservableStore implements ICognitoStorage {
+  public getState: () => IdentityState;
+  public updateState: (partial: { [sessionKey: string]: any }) => void;
+  private decrypted = {};
+  private password: string;
+
+  constructor(initState) {
+    super(initState || {});
+  }
+
+  lock() {
+    this.password = undefined;
+    this.decrypted = undefined;
+  }
+
+  unlock(password: string) {
+    this.password = password;
+    this.decrypted = decrypt(this.getState().session, password);
+  }
 
   clear(): void {
-    this.dataMemory = {};
+    this.decrypted = {};
   }
 
   getItem(key: string): string | null {
-    return this.dataMemory[key];
+    return this.decrypted[key];
   }
 
   removeItem(key: string): void {
-    delete this.dataMemory[key];
+    delete this.decrypted[key];
+    this.persist();
   }
 
   setItem(key: string, value: string): void {
-    this.dataMemory[key] = value;
+    this.decrypted[key] = value;
+    this.persist();
+  }
+
+  private persist() {
+    this.updateState({
+      session: encrypt(this.decrypted, this.password),
+    });
   }
 }
 
@@ -112,10 +154,8 @@ export class IdentityController {
   private network: AllNetworks;
   private readonly networks: IdentityNetworks[] = ['mainnet', 'testnet'];
   protected config: IdentityConfig = {};
-  public store: ObservableStore;
   // identity properties
-  private storage: ICognitoStorage;
-  private password: string;
+  public store: IdentityStorage;
   private userPool: CognitoUserPool | undefined = undefined;
   private currentUser: CognitoUser | undefined = undefined;
   private identityUser: IdentityUser | undefined = undefined;
@@ -125,35 +165,31 @@ export class IdentityController {
   public geetestUrl = '';
 
   constructor(opts: Options) {
-    this.store = new ObservableStore(opts.initState);
+    this.store = new IdentityStorage(opts.initState);
 
     this.getNetwork = () =>
       opts.getNetwork() === 'testnet' ? 'testnet' : 'mainnet';
 
     // prefetch identity configuration for networks
-    Promise.all(this.networks.map(network => this.loadConfig(network))).then(
-      configs => {
+    Promise.all(this.networks.map(network => this.loadConfig(network)))
+      .then(configs => {
         this.networks.forEach((network, i) => {
           this.config[network] = configs[i];
         });
-      }
-    );
+      })
+      .then(() => this.configure(this.getNetwork()));
+  }
+
+  initVault(password) {
+    this.store.unlock(password);
   }
 
   lock() {
-    console.log('identity locked');
-    this.apiUrl = '';
-    this.storage = undefined;
-    this.userPool = undefined;
-    this.currentUser = undefined;
-    this.geetestUrl = '';
+    this.store.lock();
   }
 
   unlock(password: string) {
-    console.log('identity unlocked');
-    // todo decrypt this.storage
-    this.storage = window.localStorage;
-    this.configure(this.getNetwork());
+    this.store.unlock(password);
   }
 
   private async loadConfig(network: AllNetworks): Promise<Config> {
@@ -174,6 +210,7 @@ export class IdentityController {
   }
 
   private async configure(network: AllNetworks) {
+    // todo reconfigure on network switch
     if (this.network != network) {
       this.network = this.getNetwork();
 
@@ -184,7 +221,7 @@ export class IdentityController {
       this.userPool = new CognitoUserPool({
         UserPoolId: config.identity.cognito.userPoolId,
         ClientId: config.identity.cognito.clientId,
-        Storage: this.storage,
+        Storage: this.store,
         endpoint: config.identity.cognito.endpoint,
       });
 
@@ -215,7 +252,7 @@ export class IdentityController {
       const user = new CognitoUser({
         Username: username,
         Pool: this.userPool,
-        Storage: this.storage,
+        Storage: this.store,
       });
 
       this.currentUser = user;

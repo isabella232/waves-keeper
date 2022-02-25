@@ -282,6 +282,7 @@ class BackgroundService extends EventEmitter {
     });
 
     this.identityController = new IdentityController({
+      initState: initState.IdentityController,
       getNetwork: this.networkController.getNetwork.bind(
         this.networkController
       ),
@@ -612,11 +613,10 @@ class BackgroundService extends EventEmitter {
 
       identitySignIn: async (username, password, geeTest) =>
         this.identityController.signIn(username, password, geeTest),
-
       identityConfirmSignIn: async code =>
         this.identityController.confirmSignIn(code),
-
       identityUser: async () => this.identityController.getIdentityUser(),
+      identitySignOut: async () => this.identityController.signOut(),
     };
   }
 
