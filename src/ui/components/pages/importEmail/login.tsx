@@ -13,21 +13,26 @@ type LoginStateType = 'sign-in' | 'confirm-sign-in';
 
 type LoginProps = {
   className: string;
-  onConfirm(user: IdentityUser): void;
+  onConfirm(user: IdentityUser & { name: string }): void;
 };
 
-export function Login({ className = '', /*identity,*/ onConfirm }: LoginProps) {
+export function Login({ className = '', onConfirm }: LoginProps) {
   const [loginState, setLoginState] = React.useState<LoginStateType>('sign-in');
   const [codeDelivery, setCodeDelivery] = React.useState<CodeDelivery>();
   const [is2FAEnabled, setIs2FAEnabled] = React.useState(false);
   const userData = React.useRef<{ username: string; password: string }>();
 
   const handleSuccess = React.useCallback(() => {
-    background.identityUser().then(onConfirm);
+    background.identityUser().then((identityUser: IdentityUser) => {
+      const [name, domain] = userData.current.username.split('@');
+      onConfirm({ ...identityUser, name: `${name[0]}*******@${domain}` });
+    });
   }, [is2FAEnabled, onConfirm]);
 
   const signIn = React.useCallback(
     async (username: string, password: string): Promise<void> => {
+      userData.current = { username, password };
+
       const config = await background.identityConfig();
       const geeTest = await getGeeTestToken(config.identity.geetest.url);
       const cognitoUser = await background.identitySignIn(

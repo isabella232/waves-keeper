@@ -2,7 +2,6 @@ import * as React from 'react';
 import * as styles from './importEmail.module.css';
 import cn from 'classnames';
 import { Error } from '../../ui';
-import { IdentityUser } from '../../../../controllers/IdentityController';
 
 import { Trans } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../../store';
@@ -39,7 +38,7 @@ export function ImportEmail({ setTab }: Props) {
   }, []);
 
   const handleConfirm = React.useCallback(
-    (userData: IdentityUser) => {
+    userData => {
       if (accounts.find(({ address }) => address === userData.address)) {
         setAlreadyExists(true);
         return;
@@ -48,9 +47,10 @@ export function ImportEmail({ setTab }: Props) {
       dispatch(
         newAccountSelect({
           type: 'wx',
-          name: userData.username,
+          name: userData.name,
           address: userData.address,
           publicKey: userData.publicKey,
+          username: userData.username,
           hasBackup: true,
         })
       );

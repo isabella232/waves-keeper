@@ -72,6 +72,7 @@ export class VaultController {
 
   clear() {
     this.wallet.deleteVault();
+    this.identity.deleteVault();
 
     this.password = null;
     this.locked = true;

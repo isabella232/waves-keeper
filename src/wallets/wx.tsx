@@ -2,7 +2,6 @@ import { BigNumber } from '@waves/bignumber';
 import { Account, NetworkName } from '../accounts/types';
 import { Wallet } from './wallet';
 import { TSignData } from '@waves/signature-adapter';
-import * as libCrypto from '@waves/ts-lib-crypto';
 import * as create from 'parse-json-bignumber';
 import { convertInvokeListWorkAround } from './utils';
 import { InfoAdapter } from '../controllers/MessageController';
@@ -16,35 +15,47 @@ export interface WxWalletInput {
   network: NetworkName;
   networkCode: string;
   publicKey: string;
-  identity: IdentityController;
+  address: string;
+  username: string;
 }
 
 interface WxWalletData extends Account {
   publicKey: string;
+  address: string;
+  username: string;
 }
 
 export class WxWallet extends Wallet<WxWalletData> {
   private readonly _adapter: InfoAdapter;
   private identity: IdentityController;
 
-  constructor({
-    name,
-    network,
-    networkCode,
-    publicKey,
-    identity,
-  }: WxWalletInput) {
+  constructor(
+    { name, network, networkCode, publicKey, address, username }: WxWalletInput,
+    identity: IdentityController
+  ) {
     super({
-      address: libCrypto.address({ publicKey }, networkCode),
+      address,
       name,
       network,
       networkCode,
-      publicKey: publicKey,
+      publicKey,
+      username,
       type: 'wx',
     });
 
     this._adapter = new InfoAdapter(this.data);
     this.identity = identity;
+  }
+
+  serialize(persist = false): WxWalletData {
+    if (persist) {
+      this.identity.store.persist();
+    }
+    return super.serialize();
+  }
+
+  getAccount(): WxWalletData {
+    return { username: this.data.username, ...super.getAccount() };
   }
 
   getSeed(): string {

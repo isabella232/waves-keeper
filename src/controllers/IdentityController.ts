@@ -11,6 +11,7 @@ import {
 import { GeeTest } from '../ui/components/pages/importEmail/geeTest';
 import { libs, seedUtils } from '@waves/waves-transactions';
 import * as ObservableStore from 'obs-store';
+import { WxWalletInput } from '../wallets/wx';
 
 export type IdentityUser = {
   address: string;
@@ -84,6 +85,7 @@ type IdentityState = {
 
 interface Options {
   getNetwork: () => AllNetworks;
+  getSelectedAccount: () => WxWalletInput | any;
   initState: IdentityState;
 }
 
@@ -106,26 +108,22 @@ function decrypt(encryptedText: string, password: string): any {
 
 class IdentityStorage extends ObservableStore implements ICognitoStorage {
   public getState: () => IdentityState;
-  public updateState: (partial: { [sessionKey: string]: any }) => void;
+  public putState: (newState: any) => void;
+  public updateState: (partial: Partial<IdentityState>) => void;
   private decrypted = {};
   private password: string;
 
-  constructor(initState) {
+  constructor(initState: Partial<IdentityState>) {
     super(initState || {});
   }
 
   lock() {
     this.password = undefined;
-    this.decrypted = undefined;
+    this.clear();
   }
 
   unlock(password: string) {
     this.password = password;
-    this.decrypted = decrypt(this.getState().session, password);
-  }
-
-  clear(): void {
-    this.decrypted = {};
   }
 
   getItem(key: string): string | null {
@@ -134,23 +132,40 @@ class IdentityStorage extends ObservableStore implements ICognitoStorage {
 
   removeItem(key: string): void {
     delete this.decrypted[key];
-    this.persist();
   }
 
   setItem(key: string, value: string): void {
     this.decrypted[key] = value;
-    this.persist();
   }
 
-  private persist() {
+  persist() {
+    // todo persist manually after:
+    //  - delete account
+    const restored = decrypt(this.getState().session, this.password);
     this.updateState({
-      session: encrypt(this.decrypted, this.password),
+      session: encrypt({ ...restored, ...this.decrypted }, this.password),
     });
+    this.clear();
+  }
+
+  clear(): void {
+    this.decrypted = {};
+  }
+
+  purge(): void {
+    // todo perform only on deleteVault
+    this.clear();
+    this.putState({});
+  }
+
+  restore() {
+    this.decrypted = decrypt(this.getState().session, this.password);
   }
 }
 
 export class IdentityController {
   protected getNetwork: () => IdentityNetworks;
+  protected getSelectedAccount: () => WxWalletInput | any;
   private network: AllNetworks;
   private readonly networks: IdentityNetworks[] = ['mainnet', 'testnet'];
   protected config: IdentityConfig = {};
@@ -159,7 +174,6 @@ export class IdentityController {
   private userPool: CognitoUserPool | undefined = undefined;
   private currentUser: CognitoUser | undefined = undefined;
   private identityUser: IdentityUser | undefined = undefined;
-  private username = '';
   private readonly seed = seedUtils.Seed.create();
   private apiUrl = '';
   public geetestUrl = '';
@@ -170,8 +184,10 @@ export class IdentityController {
     this.getNetwork = () =>
       opts.getNetwork() === 'testnet' ? 'testnet' : 'mainnet';
 
-    // prefetch identity configuration for networks
+    this.getSelectedAccount = opts.getSelectedAccount;
+
     Promise.all(this.networks.map(network => this.loadConfig(network)))
+      // prefetch identity configuration for networks
       .then(configs => {
         this.networks.forEach((network, i) => {
           this.config[network] = configs[i];
@@ -182,6 +198,10 @@ export class IdentityController {
 
   initVault(password) {
     this.store.unlock(password);
+  }
+
+  deleteVault() {
+    this.store.purge();
   }
 
   lock() {
@@ -242,7 +262,7 @@ export class IdentityController {
   ): Promise<CognitoUser> {
     this.currentUser = undefined;
     this.identityUser = undefined;
-    this.username = username;
+    this.store.clear();
 
     return new Promise<CognitoUser>((resolve, reject) => {
       if (!this.userPool) {
@@ -352,14 +372,16 @@ export class IdentityController {
     });
   }
 
-  public signOut(): Promise<void> {
+  public async signOut(): Promise<void> {
+    await this.restoreSession();
+
     if (this.currentUser) {
       this.currentUser.signOut();
+      this.store.persist();
     }
 
     this.currentUser = undefined;
     this.identityUser = undefined;
-    this.username = '';
 
     return Promise.resolve();
   }
@@ -395,6 +417,8 @@ export class IdentityController {
       payload: libs.crypto.base64Encode(bytes),
       signature: libs.crypto.base64Encode(signature),
     });
+
+    this.store.persist();
 
     return libs.crypto.base58Encode(
       libs.crypto.base64Decode(response.signature)
@@ -434,6 +458,18 @@ export class IdentityController {
   }
 
   private async restoreSession(): Promise<CognitoUserSession> {
+    const account = this.getSelectedAccount();
+    if (account.type != 'wx') {
+      return;
+    }
+
+    await this.configure(this.getNetwork());
+    this.store.restore();
+    // set current user session
+    this.store.setItem(
+      `CognitoIdentityServiceProvider.${this.userPool.getClientId()}.LastAuthUser`,
+      account.username
+    );
     this.currentUser = this.userPool.getCurrentUser();
     // restores user session tokens from storage
     return new Promise((resolve, reject) => {
@@ -480,10 +516,10 @@ export class IdentityController {
             return reject(new Error('Not authenticated'));
           }
 
-          const resfeshToken = session.getRefreshToken();
+          const refreshToken = session.getRefreshToken();
 
           this.currentUser.refreshSession(
-            resfeshToken,
+            refreshToken,
             (err, data) => {
               if (err) {
                 return reject(err);
@@ -529,17 +565,11 @@ export class IdentityController {
     return await response.json();
   }
 
-  async getIdentityUser() {
-    if (!this.username) {
-      return '';
-    }
-
-    const [name, domain] = this.username.split('@');
-
+  async getIdentityUser(): Promise<IdentityUser> {
     return {
-      address: this.identityUser ? this.identityUser.address : '',
       publicKey: this.identityUser ? this.identityUser.publicKey : '',
-      username: `${name[0]}********@${domain}`,
+      address: this.identityUser ? this.identityUser.address : '',
+      username: this.currentUser.getUsername(),
     };
   }
 }

@@ -35,13 +35,17 @@ export function createWallet(
         privateKey: input.privateKey,
       });
     case 'wx':
-      return new WxWallet({
-        name: input.name,
-        network: input.network,
-        networkCode: input.networkCode,
-        publicKey: input.publicKey,
-        identity,
-      });
+      return new WxWallet(
+        {
+          name: input.name,
+          network: input.network,
+          networkCode: input.networkCode,
+          publicKey: input.publicKey,
+          address: input.address,
+          username: input.username,
+        },
+        identity
+      );
     default:
       throw new Error(`Unsupported wallet type: "${(input as any).type}"`);
   }

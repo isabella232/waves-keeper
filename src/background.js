@@ -286,6 +286,9 @@ class BackgroundService extends EventEmitter {
       getNetwork: this.networkController.getNetwork.bind(
         this.networkController
       ),
+      getSelectedAccount: this.preferencesController.getSelectedAccount.bind(
+        this.preferencesController
+      ),
     });
 
     // Wallet. Wallet creation, app locking, signing method

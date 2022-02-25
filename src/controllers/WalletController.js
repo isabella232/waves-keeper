@@ -304,7 +304,7 @@ export class WalletController {
   }
 
   _saveWallets() {
-    const walletsData = this.wallets.map(wallet => wallet.serialize());
+    const walletsData = this.wallets.map(wallet => wallet.serialize(true));
     this.store.updateState({ vault: encrypt(walletsData, this.password) });
   }
 
