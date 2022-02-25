@@ -10,6 +10,7 @@ import {
 } from 'amazon-cognito-identity-js';
 import { GeeTest } from '../ui/components/pages/importEmail/geeTest';
 import { libs, seedUtils } from '@waves/waves-transactions';
+import * as ObservableStore from 'obs-store';
 
 export type IdentityUser = {
   address: string;
@@ -77,17 +78,44 @@ type IdentityConfig = Partial<{
   [K in IdentityNetworks]: Config;
 }>;
 
+type IdentityState = {
+  session: string;
+};
+
 interface Options {
   getNetwork: () => AllNetworks;
+  initState: IdentityState;
+}
+
+class IdentityStorage implements ICognitoStorage {
+  private dataMemory = {};
+
+  clear(): void {
+    this.dataMemory = {};
+  }
+
+  getItem(key: string): string | null {
+    return this.dataMemory[key];
+  }
+
+  removeItem(key: string): void {
+    delete this.dataMemory[key];
+  }
+
+  setItem(key: string, value: string): void {
+    this.dataMemory[key] = value;
+  }
 }
 
 export class IdentityController {
   protected getNetwork: () => IdentityNetworks;
-  protected network: AllNetworks;
-  private networks: IdentityNetworks[] = ['mainnet', 'testnet'];
+  private network: AllNetworks;
+  private readonly networks: IdentityNetworks[] = ['mainnet', 'testnet'];
   protected config: IdentityConfig = {};
+  public store: ObservableStore;
   // identity properties
-  private storage: ICognitoStorage = window.localStorage;
+  private storage: ICognitoStorage;
+  private password: string;
   private userPool: CognitoUserPool | undefined = undefined;
   private currentUser: CognitoUser | undefined = undefined;
   private identityUser: IdentityUser | undefined = undefined;
@@ -97,6 +125,8 @@ export class IdentityController {
   public geetestUrl = '';
 
   constructor(opts: Options) {
+    this.store = new ObservableStore(opts.initState);
+
     this.getNetwork = () =>
       opts.getNetwork() === 'testnet' ? 'testnet' : 'mainnet';
 

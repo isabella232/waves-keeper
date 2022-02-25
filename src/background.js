@@ -281,7 +281,7 @@ class BackgroundService extends EventEmitter {
       initState: initState.UiStateController,
     });
 
-    this.indentityController = new IdentityController({
+    this.identityController = new IdentityController({
       getNetwork: this.networkController.getNetwork.bind(
         this.networkController
       ),
@@ -300,13 +300,13 @@ class BackgroundService extends EventEmitter {
         this.networkController
       ),
       trash: this.trash,
-      identity: this.indentityController,
+      identity: this.identityController,
     });
 
     this.vaultController = new VaultController({
-      initState: initState.SessionController,
+      initState: initState.VaultController,
       wallet: this.walletController,
-      identity: this.indentityController,
+      identity: this.identityController,
     });
 
     this.walletController.store.subscribe(() => {
@@ -429,7 +429,8 @@ class BackgroundService extends EventEmitter {
       RemoteConfigController: this.remoteConfigController.store,
       NotificationsController: this.notificationsController.store,
       TrashController: this.trash.store,
-      SessionController: this.vaultController.store,
+      VaultController: this.vaultController.store,
+      IdentityController: this.identityController.store,
     });
 
     // Call send update, which is bound to ui EventEmitter, on every store update
@@ -607,15 +608,15 @@ class BackgroundService extends EventEmitter {
       shouldIgnoreError: async (context, message) =>
         this.remoteConfigController.shouldIgnoreError(context, message),
 
-      identityConfig: async () => this.indentityController.getConfig(),
+      identityConfig: async () => this.identityController.getConfig(),
 
       identitySignIn: async (username, password, geeTest) =>
-        this.indentityController.signIn(username, password, geeTest),
+        this.identityController.signIn(username, password, geeTest),
 
       identityConfirmSignIn: async code =>
-        this.indentityController.confirmSignIn(code),
+        this.identityController.confirmSignIn(code),
 
-      identityUser: async () => this.indentityController.getIdentityUser(),
+      identityUser: async () => this.identityController.getIdentityUser(),
     };
   }
 
