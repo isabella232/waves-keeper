@@ -110,7 +110,7 @@ class IdentityStorage extends ObservableStore implements ICognitoStorage {
   public getState: () => IdentityState;
   public putState: (newState: any) => void;
   public updateState: (partial: Partial<IdentityState>) => void;
-  private decrypted = {};
+  private data = {};
   private password: string;
 
   constructor(initState: Partial<IdentityState>) {
@@ -127,15 +127,15 @@ class IdentityStorage extends ObservableStore implements ICognitoStorage {
   }
 
   getItem(key: string): string | null {
-    return this.decrypted[key];
+    return this.data[key];
   }
 
   removeItem(key: string): void {
-    delete this.decrypted[key];
+    delete this.data[key];
   }
 
   setItem(key: string, value: string): void {
-    this.decrypted[key] = value;
+    this.data[key] = value;
   }
 
   persist() {
@@ -143,23 +143,22 @@ class IdentityStorage extends ObservableStore implements ICognitoStorage {
     //  - delete account
     const restored = decrypt(this.getState().session, this.password);
     this.updateState({
-      session: encrypt({ ...restored, ...this.decrypted }, this.password),
+      session: encrypt({ ...restored, ...this.data }, this.password),
     });
     this.clear();
   }
 
   clear(): void {
-    this.decrypted = {};
+    this.data = {};
   }
 
   purge(): void {
-    // todo perform only on deleteVault
     this.clear();
     this.putState({});
   }
 
   restore() {
-    this.decrypted = decrypt(this.getState().session, this.password);
+    this.data = decrypt(this.getState().session, this.password);
   }
 }
 
@@ -193,7 +192,7 @@ export class IdentityController {
           this.config[network] = configs[i];
         });
       })
-      .then(() => this.configure(this.getNetwork()));
+      .then(() => this.configure());
   }
 
   initVault(password) {
@@ -229,29 +228,26 @@ export class IdentityController {
     return await featuresConfigResponse.json();
   }
 
-  private async configure(network: AllNetworks) {
-    // todo reconfigure on network switch
-    if (this.network != network) {
-      this.network = this.getNetwork();
+  public configure() {
+    const currentNetwork = this.getNetwork();
+    this.store.clear();
 
-      const config = await this.config[network];
+    if (this.network != currentNetwork) {
+      this.network = currentNetwork;
 
+      const config = this.config[currentNetwork];
       this.apiUrl = config.identity.apiUrl;
-
       this.userPool = new CognitoUserPool({
         UserPoolId: config.identity.cognito.userPoolId,
         ClientId: config.identity.cognito.clientId,
         Storage: this.store,
         endpoint: config.identity.cognito.endpoint,
       });
-
       this.geetestUrl = config.identity.geetest.url;
     }
   }
 
   async getConfig() {
-    // TODO reconfigure on account switch
-    await this.configure(this.getNetwork());
     return this.config[this.network];
   }
 
@@ -463,7 +459,6 @@ export class IdentityController {
       return;
     }
 
-    await this.configure(this.getNetwork());
     this.store.restore();
     // set current user session
     this.store.setItem(

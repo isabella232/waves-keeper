@@ -271,10 +271,13 @@ class BackgroundService extends EventEmitter {
       getNetworkConfig: () => this.remoteConfigController.getNetworkConfig(),
     });
 
-    // On network change select accounts of this network
-    this.networkController.store.subscribe(() =>
-      this.preferencesController.syncCurrentNetworkAccounts()
-    );
+    // On network change
+    this.networkController.store.subscribe(() => {
+      // select accounts of this network
+      this.preferencesController.syncCurrentNetworkAccounts();
+      // update cognito identity configuration
+      this.identityController.configure();
+    });
 
     // Ui State. Provides storage for ui application
     this.uiStateController = new UiStateController({
