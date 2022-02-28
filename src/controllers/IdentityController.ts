@@ -203,6 +203,12 @@ export class IdentityController {
     this.store.purge();
   }
 
+  clear() {
+    this.currentUser = undefined;
+    this.identityUser = undefined;
+    this.store.clear();
+  }
+
   lock() {
     this.store.lock();
   }
@@ -256,9 +262,7 @@ export class IdentityController {
     password: string,
     metaData: GeeTest
   ): Promise<CognitoUser> {
-    this.currentUser = undefined;
-    this.identityUser = undefined;
-    this.store.clear();
+    this.clear();
 
     return new Promise<CognitoUser>((resolve, reject) => {
       if (!this.userPool) {
@@ -285,6 +289,8 @@ export class IdentityController {
         {
           onSuccess: async () => {
             this.identityUser = await this.fetchIdentityUser();
+            this.identityUser.username = this.currentUser.getUsername();
+            this.currentUser = undefined;
 
             delete user['challengeName'];
             delete user['challengeParam'];
@@ -352,6 +358,8 @@ export class IdentityController {
 
             if (session && !this.identityUser) {
               this.identityUser = await this.fetchIdentityUser();
+              this.identityUser.username = this.currentUser.getUsername();
+              this.currentUser = undefined;
 
               resolve();
             }
@@ -369,7 +377,7 @@ export class IdentityController {
   }
 
   public async signOut(): Promise<void> {
-    await this.restoreSession();
+    await this.restoreUserSession();
 
     if (this.currentUser) {
       this.currentUser.signOut();
@@ -404,6 +412,7 @@ export class IdentityController {
   }
 
   public async signBytes(bytes: Array<number> | Uint8Array): Promise<string> {
+    await this.restoreUserSession();
     await this.refreshSessionIsNeed();
 
     const signature = libs.crypto.base58Decode(
@@ -435,25 +444,9 @@ export class IdentityController {
     return session.getIdToken();
   }
 
-  private async refreshSessionIsNeed(): Promise<void> {
-    await this.restoreSession();
+  private async restoreUserSession(): Promise<CognitoUserSession> {
+    this.clear();
 
-    const token = this.getIdToken();
-    const payload = token.decodePayload();
-    const currentTime = Math.ceil(Date.now() / 1000);
-    const currentPublicKey = this.seed.keyPair.publicKey;
-    const isValidTime = payload.exp - currentTime > 10;
-    const isValidPublicKey =
-      payload['custom:encryptionKey'] === currentPublicKey;
-
-    if (isValidPublicKey && isValidTime) {
-      return Promise.resolve();
-    }
-
-    return this.refreshSession();
-  }
-
-  private async restoreSession(): Promise<CognitoUserSession> {
     const account = this.getSelectedAccount();
     if (account.type != 'wx') {
       return;
@@ -479,6 +472,22 @@ export class IdentityController {
         resolve(session);
       });
     });
+  }
+
+  private async refreshSessionIsNeed(): Promise<void> {
+    const token = this.getIdToken();
+    const payload = token.decodePayload();
+    const currentTime = Math.ceil(Date.now() / 1000);
+    const currentPublicKey = this.seed.keyPair.publicKey;
+    const isValidTime = payload.exp - currentTime > 10;
+    const isValidPublicKey =
+      payload['custom:encryptionKey'] === currentPublicKey;
+
+    if (isValidPublicKey && isValidTime) {
+      return Promise.resolve();
+    }
+
+    return this.refreshSession();
   }
 
   private async refreshSession(): Promise<any> {
@@ -532,7 +541,7 @@ export class IdentityController {
 
   private async fetchIdentityUser(): Promise<IdentityUser> {
     const token = this.getIdToken().getJwtToken();
-    const itentityUserResponse = await fetch(`${this.apiUrl}/v1/user`, {
+    const identityUserResponse = await fetch(`${this.apiUrl}/v1/user`, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -540,7 +549,11 @@ export class IdentityController {
       },
     });
 
-    return await itentityUserResponse.json();
+    return await identityUserResponse.json();
+  }
+
+  getIdentityUser(): IdentityUser {
+    return this.identityUser;
   }
 
   private async signByIdentity(
@@ -558,13 +571,5 @@ export class IdentityController {
     });
 
     return await response.json();
-  }
-
-  async getIdentityUser(): Promise<IdentityUser> {
-    return {
-      publicKey: this.identityUser ? this.identityUser.publicKey : '',
-      address: this.identityUser ? this.identityUser.address : '',
-      username: this.currentUser.getUsername(),
-    };
   }
 }

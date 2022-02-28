@@ -481,6 +481,15 @@ class Background {
     }
   }
 
+  async identityClear(): Promise<void> {
+    try {
+      await this.initPromise;
+      return await this.background.identityClear();
+    } catch (err) {
+      throw new Error(prepareErrorMessage(err));
+    }
+  }
+
   async identitySignIn(
     username: string,
     password: string,

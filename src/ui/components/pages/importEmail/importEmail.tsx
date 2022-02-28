@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from '../../../store';
 import { Login } from './login';
 import { newAccountSelect } from '../../../actions';
 import { PAGES } from '../../../pageConfig';
+import background from '../../../services/Background';
 
 export const baseByNetwork = {
   mainnet: 'https://waves.exchange',
@@ -29,6 +30,8 @@ export function ImportEmail({ setTab }: Props) {
   const [alreadyExists, setAlreadyExists] = React.useState<boolean>(false);
 
   React.useEffect(() => {
+    background.identityClear();
+
     const script = document.createElement('script');
     script.src = 'geeTestCode.js';
     script.async = true;
