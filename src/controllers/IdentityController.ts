@@ -205,14 +205,8 @@ export class IdentityController {
   }
 
   deleteVault() {
-    this.clear();
+    this.clearSession();
     this.store.purge();
-  }
-
-  clear() {
-    this.currentUser = undefined;
-    this.identityUser = undefined;
-    this.store.clear();
   }
 
   lock() {
@@ -268,7 +262,7 @@ export class IdentityController {
     password: string,
     metaData: GeeTest
   ): Promise<CognitoUser> {
-    this.clear();
+    this.clearSession();
 
     return new Promise<CognitoUser>((resolve, reject) => {
       if (!this.userPool) {
@@ -385,6 +379,7 @@ export class IdentityController {
   async signBytes(bytes: Array<number> | Uint8Array): Promise<string> {
     const userId = this.getSelectedAccount().username;
 
+    this.clearSession();
     await this.restoreSession(userId);
     await this.refreshSessionIsNeed();
 
@@ -422,7 +417,6 @@ export class IdentityController {
   }
 
   private async restoreSession(userId: string): Promise<CognitoUserSession> {
-    this.clear();
     // set current user session
     this.store.restore(userId);
     this.currentUser = this.userPool.getCurrentUser();
@@ -440,7 +434,7 @@ export class IdentityController {
     });
   }
 
-  private async refreshSessionIsNeed(): Promise<void> {
+  private async refreshSessionIsNeed() {
     const token = this.getIdToken();
     const payload = token.decodePayload();
     const currentTime = Math.ceil(Date.now() / 1000);
@@ -456,7 +450,7 @@ export class IdentityController {
     return this.refreshSession();
   }
 
-  private async refreshSession(): Promise<any> {
+  private async refreshSession() {
     const meta = { 'custom:encryptionKey': this.seed.keyPair.publicKey };
 
     return new Promise<any>((resolve, reject) => {
@@ -505,11 +499,15 @@ export class IdentityController {
     });
   }
 
-  async removeSession(userId: string): Promise<void> {
+  clearSession() {
+    this.currentUser = undefined;
+    this.identityUser = undefined;
     this.store.clear();
+  }
+
+  removeSession(userId: string) {
+    this.clearSession();
     this.persistSession(userId);
-    this.clear();
-    return Promise.resolve();
   }
 
   private async fetchIdentityUser(): Promise<IdentityUser> {

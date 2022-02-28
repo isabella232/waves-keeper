@@ -327,14 +327,11 @@ class BackgroundService extends EventEmitter {
         if (wallet.getAccount().type === 'wx') {
           // persist current session to storage
           this.identityController.persistSession(wallet.getAccount().username);
-          console.log('session persisted', wallet.data.username);
         }
       })
       .on('removeWallet', wallet => {
         if (wallet.getAccount().type === 'wx') {
-          this.identityController
-            .removeSession(wallet.getAccount().username)
-            .then(() => console.log('session removed', wallet.data.username));
+          this.identityController.removeSession(wallet.getAccount().username);
         }
       });
 
@@ -638,7 +635,7 @@ class BackgroundService extends EventEmitter {
       identityConfirmSignIn: async code =>
         this.identityController.confirmSignIn(code),
       identityUser: async () => this.identityController.getIdentityUser(),
-      identityClear: async () => this.identityController.clear(),
+      identityClear: async () => this.identityController.clearSession(),
     };
   }
 
