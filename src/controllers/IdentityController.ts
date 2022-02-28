@@ -80,7 +80,7 @@ type IdentityConfig = Partial<{
 }>;
 
 type IdentityState = {
-  session: string;
+  cognitoSessions: string;
 };
 
 interface Options {
@@ -108,9 +108,9 @@ function decrypt(encryptedText: string, password: string): any {
 
 class IdentityStorage extends ObservableStore implements ICognitoStorage {
   public getState: () => IdentityState;
-  public putState: (newState: any) => void;
+  public putState: (newState: Partial<IdentityState>) => void;
   public updateState: (partial: Partial<IdentityState>) => void;
-  private data = {};
+  private memo = {};
   private password: string;
 
   constructor(initState: Partial<IdentityState>) {
@@ -119,7 +119,6 @@ class IdentityStorage extends ObservableStore implements ICognitoStorage {
 
   lock() {
     this.password = undefined;
-    this.clear();
   }
 
   unlock(password: string) {
@@ -127,38 +126,44 @@ class IdentityStorage extends ObservableStore implements ICognitoStorage {
   }
 
   getItem(key: string): string | null {
-    return this.data[key];
+    return this.memo[key];
   }
 
   removeItem(key: string): void {
-    delete this.data[key];
+    delete this.memo[key];
   }
 
   setItem(key: string, value: string): void {
-    this.data[key] = value;
-  }
-
-  persist() {
-    // todo persist manually after:
-    //  - delete account
-    const restored = decrypt(this.getState().session, this.password);
-    this.updateState({
-      session: encrypt({ ...restored, ...this.data }, this.password),
-    });
-    this.clear();
+    this.memo[key] = value;
   }
 
   clear(): void {
-    this.data = {};
+    this.memo = {};
   }
 
   purge(): void {
-    this.clear();
     this.putState({});
+    this.clear();
   }
 
-  restore() {
-    this.data = decrypt(this.getState().session, this.password);
+  restore(userId: string) {
+    const cognitoSessions = decrypt(
+      this.getState().cognitoSessions,
+      this.password
+    );
+    this.memo = cognitoSessions[userId] || {};
+  }
+
+  persist(userId: string) {
+    const cognitoSessions = decrypt(
+      this.getState().cognitoSessions,
+      this.password
+    );
+    cognitoSessions[userId] = this.memo;
+    this.updateState({
+      cognitoSessions: encrypt(cognitoSessions, this.password),
+    });
+    this.clear();
   }
 }
 
@@ -200,6 +205,7 @@ export class IdentityController {
   }
 
   deleteVault() {
+    this.clear();
     this.store.purge();
   }
 
@@ -234,7 +240,7 @@ export class IdentityController {
     return await featuresConfigResponse.json();
   }
 
-  public configure() {
+  configure() {
     const currentNetwork = this.getNetwork();
     this.store.clear();
 
@@ -376,43 +382,10 @@ export class IdentityController {
     });
   }
 
-  public async signOut(): Promise<void> {
-    await this.restoreUserSession();
+  async signBytes(bytes: Array<number> | Uint8Array): Promise<string> {
+    const userId = this.getSelectedAccount().username;
 
-    if (this.currentUser) {
-      this.currentUser.signOut();
-      this.store.persist();
-    }
-
-    this.currentUser = undefined;
-    this.identityUser = undefined;
-
-    return Promise.resolve();
-  }
-
-  public deleteUser(): Promise<string | undefined> {
-    return new Promise((resolve, reject) => {
-      if (!this.currentUser) {
-        return reject(new Error('Not authenticated'));
-      }
-
-      this.currentUser.deleteUser(async (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          try {
-            await this.signOut();
-            resolve(result);
-          } catch (e) {
-            reject(e);
-          }
-        }
-      });
-    });
-  }
-
-  public async signBytes(bytes: Array<number> | Uint8Array): Promise<string> {
-    await this.restoreUserSession();
+    await this.restoreSession(userId);
     await this.refreshSessionIsNeed();
 
     const signature = libs.crypto.base58Decode(
@@ -423,7 +396,7 @@ export class IdentityController {
       signature: libs.crypto.base64Encode(signature),
     });
 
-    this.store.persist();
+    this.persistSession(userId);
 
     return libs.crypto.base58Encode(
       libs.crypto.base64Decode(response.signature)
@@ -444,27 +417,20 @@ export class IdentityController {
     return session.getIdToken();
   }
 
-  private async restoreUserSession(): Promise<CognitoUserSession> {
+  persistSession(userId: string) {
+    this.store.persist(userId);
+  }
+
+  private async restoreSession(userId: string): Promise<CognitoUserSession> {
     this.clear();
-
-    const account = this.getSelectedAccount();
-    if (account.type != 'wx') {
-      return;
-    }
-
-    this.store.restore();
     // set current user session
-    this.store.setItem(
-      `CognitoIdentityServiceProvider.${this.userPool.getClientId()}.LastAuthUser`,
-      account.username
-    );
+    this.store.restore(userId);
     this.currentUser = this.userPool.getCurrentUser();
     // restores user session tokens from storage
     return new Promise((resolve, reject) => {
       if (!this.currentUser) {
         reject(new Error('Not authenticated'));
       }
-
       this.currentUser.getSession((err, session) => {
         if (err) {
           reject(err);
@@ -537,6 +503,13 @@ export class IdentityController {
         meta
       );
     });
+  }
+
+  async removeSession(userId: string): Promise<void> {
+    this.store.clear();
+    this.persistSession(userId);
+    this.clear();
+    return Promise.resolve();
   }
 
   private async fetchIdentityUser(): Promise<IdentityUser> {

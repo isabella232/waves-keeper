@@ -1,6 +1,7 @@
 import ObservableStore from 'obs-store';
 import { seedUtils } from '@waves/waves-transactions';
 import { createWallet } from '../wallets';
+import { EventEmitter } from 'events';
 
 function encrypt(object, password) {
   const jsonObj = JSON.stringify(object);
@@ -16,9 +17,9 @@ function decrypt(ciphertext, password) {
   }
 }
 
-export class WalletController {
+export class WalletController extends EventEmitter {
   constructor(options = {}) {
-    // TODO on extension update remove locked/initialized flags
+    super();
     this.store = new ObservableStore(options.initState);
     this.password = null;
     this.wallets = [];
@@ -46,6 +47,7 @@ export class WalletController {
 
     this.wallets.push(wallet);
     this._saveWallets();
+    this.emit('addWallet', wallet);
   }
 
   removeWallet(address, network) {
@@ -57,6 +59,7 @@ export class WalletController {
       return w !== wallet;
     });
     this._saveWallets();
+    this.emit('removeWallet', wallet);
   }
 
   getAccounts() {

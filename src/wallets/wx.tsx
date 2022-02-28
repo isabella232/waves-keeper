@@ -47,10 +47,7 @@ export class WxWallet extends Wallet<WxWalletData> {
     this.identity = identity;
   }
 
-  serialize(persist = false): WxWalletData {
-    if (persist) {
-      this.identity.store.persist();
-    }
+  serialize(): WxWalletData {
     return super.serialize();
   }
 
