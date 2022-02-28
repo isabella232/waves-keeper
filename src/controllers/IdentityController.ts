@@ -6,7 +6,6 @@ import {
   CognitoUserPool,
   CognitoUserSession,
   ICognitoStorage,
-  ISignUpResult,
 } from 'amazon-cognito-identity-js';
 import { GeeTest } from '../ui/components/pages/importEmail/geeTest';
 import { libs, seedUtils } from '@waves/waves-transactions';
@@ -18,8 +17,6 @@ export type IdentityUser = {
   publicKey: string;
   username: string;
 };
-
-export type SignUpResponse = ISignUpResult;
 
 export type CodeDelivery = {
   type: 'SMS' | 'EMAIL' | string;
@@ -34,15 +31,6 @@ export type AuthChallenge =
   | 'NEW_PASSWORD_REQUIRED'
   | 'MFA_SETUP'
   | 'CUSTOM_CHALLENGE';
-
-type IdentitySignTxRequest = {
-  payload: string;
-  signature: string;
-};
-
-type IdentitySignTxResponse = {
-  signature: string;
-};
 
 export type Config = {
   identity: {
@@ -170,17 +158,15 @@ class IdentityStorage extends ObservableStore implements ICognitoStorage {
 export class IdentityController {
   protected getNetwork: () => IdentityNetworks;
   protected getSelectedAccount: () => WxWalletInput | any;
-  private network: AllNetworks;
-  private readonly networks: IdentityNetworks[] = ['mainnet', 'testnet'];
   protected config: IdentityConfig = {};
+  private readonly networks: IdentityNetworks[] = ['mainnet', 'testnet'];
+  private network: AllNetworks;
   // identity properties
-  public store: IdentityStorage;
+  private readonly seed = seedUtils.Seed.create();
   private userPool: CognitoUserPool | undefined = undefined;
   private currentUser: CognitoUser | undefined = undefined;
   private identityUser: IdentityUser | undefined = undefined;
-  private readonly seed = seedUtils.Seed.create();
-  private apiUrl = '';
-  public geetestUrl = '';
+  store: IdentityStorage;
 
   constructor(opts: Options) {
     this.store = new IdentityStorage(opts.initState);
@@ -234,6 +220,10 @@ export class IdentityController {
     return await featuresConfigResponse.json();
   }
 
+  getConfig(): Config {
+    return this.config[this.network];
+  }
+
   configure() {
     const currentNetwork = this.getNetwork();
     this.store.clear();
@@ -242,19 +232,13 @@ export class IdentityController {
       this.network = currentNetwork;
 
       const config = this.config[currentNetwork];
-      this.apiUrl = config.identity.apiUrl;
       this.userPool = new CognitoUserPool({
         UserPoolId: config.identity.cognito.userPoolId,
         ClientId: config.identity.cognito.clientId,
         Storage: this.store,
         endpoint: config.identity.cognito.endpoint,
       });
-      this.geetestUrl = config.identity.geetest.url;
     }
-  }
-
-  async getConfig() {
-    return this.config[this.network];
   }
 
   async signIn(
@@ -376,40 +360,22 @@ export class IdentityController {
     });
   }
 
-  async signBytes(bytes: Array<number> | Uint8Array): Promise<string> {
-    const userId = this.getSelectedAccount().username;
-
-    this.clearSession();
-    await this.restoreSession(userId);
-    await this.refreshSessionIsNeed();
-
-    const signature = libs.crypto.base58Decode(
-      libs.crypto.signBytes(this.seed.keyPair, bytes)
-    );
-    const response = await this.signByIdentity({
-      payload: libs.crypto.base64Encode(bytes),
-      signature: libs.crypto.base64Encode(signature),
+  private async fetchIdentityUser(): Promise<IdentityUser> {
+    const token = this.getIdToken().getJwtToken();
+    const cfg = this.getConfig();
+    const identityUserResponse = await fetch(`${cfg.identity.apiUrl}/v1/user`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
     });
 
-    this.persistSession(userId);
-
-    return libs.crypto.base58Encode(
-      libs.crypto.base64Decode(response.signature)
-    );
+    return await identityUserResponse.json();
   }
 
-  private getIdToken(): CognitoIdToken {
-    if (!this.currentUser) {
-      throw new Error('Not authenticated');
-    }
-
-    const session = this.currentUser.getSignInUserSession();
-
-    if (!session) {
-      throw new Error('Not authenticated');
-    }
-
-    return session.getIdToken();
+  getIdentityUser(): IdentityUser {
+    return this.identityUser;
   }
 
   persistSession(userId: string) {
@@ -510,28 +476,37 @@ export class IdentityController {
     this.persistSession(userId);
   }
 
-  private async fetchIdentityUser(): Promise<IdentityUser> {
-    const token = this.getIdToken().getJwtToken();
-    const identityUserResponse = await fetch(`${this.apiUrl}/v1/user`, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+  async signBytes(bytes: Array<number> | Uint8Array): Promise<string> {
+    const userId = this.getSelectedAccount().username;
+
+    this.clearSession();
+    await this.restoreSession(userId);
+    await this.refreshSessionIsNeed();
+
+    const signature = libs.crypto.base58Decode(
+      libs.crypto.signBytes(this.seed.keyPair, bytes)
+    );
+    const response = await this.signByIdentity({
+      payload: libs.crypto.base64Encode(bytes),
+      signature: libs.crypto.base64Encode(signature),
     });
 
-    return await identityUserResponse.json();
+    this.persistSession(userId);
+
+    return libs.crypto.base58Encode(
+      libs.crypto.base64Decode(response.signature)
+    );
   }
 
-  getIdentityUser(): IdentityUser {
-    return this.identityUser;
-  }
-
-  private async signByIdentity(
-    body: IdentitySignTxRequest
-  ): Promise<IdentitySignTxResponse> {
+  private async signByIdentity(body: {
+    payload: string;
+    signature: string;
+  }): Promise<{
+    signature: string;
+  }> {
     const token = this.getIdToken().getJwtToken();
-    const response = await fetch(`${this.apiUrl}/v1/sign`, {
+    const cfg = this.getConfig();
+    const response = await fetch(`${cfg.identity.apiUrl}/v1/sign`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -542,5 +517,19 @@ export class IdentityController {
     });
 
     return await response.json();
+  }
+
+  private getIdToken(): CognitoIdToken {
+    if (!this.currentUser) {
+      throw new Error('Not authenticated');
+    }
+
+    const session = this.currentUser.getSignInUserSession();
+
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
+
+    return session.getIdToken();
   }
 }
