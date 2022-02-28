@@ -191,7 +191,7 @@ export const PAGES_CONF = {
     menu: {
       hasLogo: true,
       hasSettings: false,
-      back: PAGES.IMPORT_SEED_BACK,
+      back: true,
     },
   },
   [PAGES.CHANGE_ACCOUNT_NAME]: {
