@@ -4,7 +4,6 @@ import {
   CognitoUser,
   CognitoUserAttribute,
   CognitoUserPool,
-  CognitoUserSession,
   ICognitoStorage,
 } from 'amazon-cognito-identity-js';
 import { GeeTest } from '../ui/components/pages/importEmail/geeTest';
@@ -151,7 +150,6 @@ class IdentityStorage extends ObservableStore implements ICognitoStorage {
     this.updateState({
       cognitoSessions: encrypt(cognitoSessions, this.password),
     });
-    this.clear();
   }
 }
 
@@ -384,9 +382,11 @@ export class IdentityController {
 
   updateSession() {
     this.persistSession(this.getSelectedAccount().username);
+    this.clearSession();
   }
 
-  private async restoreSession(userId: string): Promise<CognitoUserSession> {
+  async restoreSession(userId: string) {
+    this.clearSession();
     // set current user session
     this.store.restore(userId);
     this.currentUser = this.userPool.getCurrentUser();
@@ -399,7 +399,12 @@ export class IdentityController {
         if (err) {
           reject(err);
         }
-        resolve(session);
+        this.refreshSessionIsNeed()
+          .then(data => {
+            this.persistSession(userId);
+            resolve(data);
+          })
+          .catch(err => reject(err));
       });
     });
   }
@@ -482,10 +487,7 @@ export class IdentityController {
 
   async signBytes(bytes: Array<number> | Uint8Array): Promise<string> {
     const userId = this.getSelectedAccount().username;
-
-    this.clearSession();
     await this.restoreSession(userId);
-    await this.refreshSessionIsNeed();
 
     const signature = libs.crypto.base58Decode(
       libs.crypto.signBytes(this.seed.keyPair, bytes)
@@ -495,7 +497,7 @@ export class IdentityController {
       signature: libs.crypto.base64Encode(signature),
     });
 
-    this.persistSession(userId);
+    this.clearSession();
 
     return libs.crypto.base58Encode(
       libs.crypto.base64Decode(response.signature)

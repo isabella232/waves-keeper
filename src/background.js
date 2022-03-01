@@ -629,14 +629,15 @@ class BackgroundService extends EventEmitter {
         this.remoteConfigController.shouldIgnoreError(context, message),
 
       identityConfig: async () => this.identityController.getConfig(),
-
       identitySignIn: async (username, password, geeTest) =>
         this.identityController.signIn(username, password, geeTest),
       identityConfirmSignIn: async code =>
         this.identityController.confirmSignIn(code),
       identityUser: async () => this.identityController.getIdentityUser(),
-      identityClear: async () => this.identityController.clearSession(),
+      identityRestore: async userId =>
+        this.identityController.restoreSession(userId),
       identityUpdate: async () => this.identityController.updateSession(),
+      identityClear: async () => this.identityController.clearSession(),
     };
   }
 

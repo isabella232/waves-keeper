@@ -481,10 +481,10 @@ class Background {
     }
   }
 
-  async identityClear(): Promise<void> {
+  async identityRestore(userId: string): Promise<void> {
     try {
       await this.initPromise;
-      return await this.background.identityClear();
+      return await this.background.identityRestore(userId);
     } catch (err) {
       throw new Error(prepareErrorMessage(err));
     }
@@ -494,6 +494,15 @@ class Background {
     try {
       await this.initPromise;
       return await this.background.identityUpdate();
+    } catch (err) {
+      throw new Error(prepareErrorMessage(err));
+    }
+  }
+
+  async identityClear(): Promise<void> {
+    try {
+      await this.initPromise;
+      return await this.background.identityClear();
     } catch (err) {
       throw new Error(prepareErrorMessage(err));
     }

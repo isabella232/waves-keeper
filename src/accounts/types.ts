@@ -9,6 +9,7 @@ export interface Account {
   networkCode: string;
   publicKey: string;
   type: AccountType;
+  username?: string;
 }
 
 export type KeystoreAccount = Pick<
