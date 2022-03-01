@@ -1,6 +1,6 @@
 import * as styles from './importEmail.module.css';
 import cn from 'classnames';
-import { Trans } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button, Error, Input } from '../../ui';
 import * as React from 'react';
 import { useAppSelector } from '../../../store';
@@ -12,6 +12,7 @@ interface Props {
 }
 
 export function SignInForm({ userData, signIn }: Props) {
+  const { t } = useTranslation();
   const networkId = useAppSelector(state => state.currentNetwork);
 
   const [pending, setPending] = React.useState<boolean>(false);
@@ -45,7 +46,7 @@ export function SignInForm({ userData, signIn }: Props) {
       ...prev,
       emailRequired:
         email.length === 0 || /.+@.+\..+/.test(email) === false
-          ? 'Enter correct email'
+          ? t('importEmail.emailRequired')
           : null,
     }));
   }, [email]);
@@ -65,7 +66,8 @@ export function SignInForm({ userData, signIn }: Props) {
   const handlePasswordBlur = React.useCallback(() => {
     setErrors(prev => ({
       ...prev,
-      passwordRequired: password.length === 0 ? 'Enter password' : null,
+      passwordRequired:
+        password.length === 0 ? t('importEmail.passwordRequired') : null,
     }));
   }, [password.length]);
 
@@ -80,13 +82,15 @@ export function SignInForm({ userData, signIn }: Props) {
       } catch (e) {
         if (e) {
           const limitExceededMessage =
-            'You have exceeded incorrect username or password limit. If you have any problems, please contact support https://support.waves.exchange/.';
+            'You have exceeded incorrect username or password limit. ' +
+            'If you have any problems, please contact support ' +
+            'https://support.waves.exchange/.';
 
           setErrors(prev => ({
             ...prev,
             _form:
               e.message === limitExceededMessage
-                ? 'Attempt limit exceeded, please try after some time.'
+                ? t('importEmail.limitExceeded')
                 : e.message || JSON.stringify(e),
           }));
         }
