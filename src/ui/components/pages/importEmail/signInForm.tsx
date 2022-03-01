@@ -6,17 +6,24 @@ import * as React from 'react';
 import { useAppSelector } from '../../../store';
 import { baseByNetwork } from './importEmail';
 
-export function SignInForm({ signIn }) {
+interface Props {
+  userData: { username: string; password: string };
+  signIn: (username: string, password: string) => void;
+}
+
+export function SignInForm({ userData, signIn }: Props) {
   const networkId = useAppSelector(state => state.currentNetwork);
 
-  const [pending, setPenging] = React.useState<boolean>(false);
+  const [pending, setPending] = React.useState<boolean>(false);
   const [errors, setErrors] = React.useState<Record<string, string | null>>({
     _form: null,
     emailRequired: null,
     passwordRequired: null,
   });
-  const [email, setEmail] = React.useState<string>('asmelnikovse@gmail.com');
-  const [password, setPassword] = React.useState<string>('hellow0rlD!');
+  const [email, setEmail] = React.useState<string>(userData.username);
+  const [name, domain] = email.split('@');
+  const maskedEmail = `${name[0]}******@${domain}`;
+  const [password, setPassword] = React.useState<string>(userData.password);
   const mounted = React.useRef<boolean>(false);
 
   const handleEmailChange = React.useCallback(
@@ -64,7 +71,7 @@ export function SignInForm({ signIn }) {
     async event => {
       event.preventDefault();
 
-      setPenging(true);
+      setPending(true);
 
       try {
         await signIn(email, password);
@@ -83,7 +90,7 @@ export function SignInForm({ signIn }) {
         }
       } finally {
         if (mounted.current) {
-          setPenging(false);
+          setPending(false);
         }
       }
     },
@@ -109,15 +116,20 @@ export function SignInForm({ signIn }) {
           <Trans i18nKey="importEmail.emailLabel" />
         </div>
 
-        <Input
-          data-testid="emailInput"
-          value={email}
-          spellCheck={false}
-          onChange={handleEmailChange}
-          onBlur={handleEmailBlur}
-          error={errors.emailRequired}
-          autoFocus
-        />
+        {userData.username ? (
+          <Input data-testid="emailInput" value={maskedEmail} disabled />
+        ) : (
+          <Input
+            data-testid="emailInput"
+            value={email}
+            spellCheck={false}
+            onChange={handleEmailChange}
+            onBlur={handleEmailBlur}
+            error={errors.emailRequired}
+            autoFocus
+          />
+        )}
+
         <Error show={errors.emailRequired != null}>
           {errors.emailRequired}
         </Error>
@@ -135,6 +147,7 @@ export function SignInForm({ signIn }) {
           onChange={handlePasswordChange}
           onBlur={handlePasswordBlur}
           error={errors.passwordRequired}
+          autoFocus={userData.username}
         />
         <Error show={errors.passwordRequired != null}>
           {errors.passwordRequired}
@@ -166,18 +179,20 @@ export function SignInForm({ signIn }) {
           <Trans i18nKey="importEmail.forgotPassword" />
         </a>
 
-        <div>
-          <Trans i18nKey="importEmail.dontHaveAccount" />
-          &nbsp;
-          <a
-            rel="noopener noreferrer"
-            className="link blue"
-            href={`${baseByNetwork[networkId]}/sign-up/email`}
-            target="_blank"
-          >
-            <Trans i18nKey="importEmail.signUp" />
-          </a>
-        </div>
+        {!userData.username && (
+          <div>
+            <Trans i18nKey="importEmail.dontHaveAccount" />
+            &nbsp;
+            <a
+              rel="noopener noreferrer"
+              className="link blue"
+              href={`${baseByNetwork[networkId]}/sign-up/email`}
+              target="_blank"
+            >
+              <Trans i18nKey="importEmail.signUp" />
+            </a>
+          </div>
+        )}
       </div>
     </form>
   );

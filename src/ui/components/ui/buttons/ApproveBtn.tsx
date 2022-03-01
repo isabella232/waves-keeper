@@ -61,7 +61,8 @@ export class ApproveBtn extends React.PureComponent {
     const { timerEnd, currentTime } = state;
     const autoClickProtection = props.autoClickProtection;
     const disabled =
-      (!timerEnd || timerEnd > currentTime) && autoClickProtection;
+      ((!timerEnd || timerEnd > currentTime) && autoClickProtection) ||
+      props.loading;
     const percentage = !timerEnd
       ? 0
       : 100 -

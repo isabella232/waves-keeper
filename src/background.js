@@ -636,6 +636,7 @@ class BackgroundService extends EventEmitter {
         this.identityController.confirmSignIn(code),
       identityUser: async () => this.identityController.getIdentityUser(),
       identityClear: async () => this.identityController.clearSession(),
+      identityUpdate: async () => this.identityController.updateSession(),
     };
   }
 

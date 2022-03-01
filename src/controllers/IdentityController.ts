@@ -382,6 +382,10 @@ export class IdentityController {
     this.store.persist(userId);
   }
 
+  updateSession() {
+    this.persistSession(this.getSelectedAccount().username);
+  }
+
   private async restoreSession(userId: string): Promise<CognitoUserSession> {
     // set current user session
     this.store.restore(userId);

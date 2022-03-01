@@ -490,6 +490,15 @@ class Background {
     }
   }
 
+  async identityUpdate(): Promise<void> {
+    try {
+      await this.initPromise;
+      return await this.background.identityUpdate();
+    } catch (err) {
+      throw new Error(prepareErrorMessage(err));
+    }
+  }
+
   async identitySignIn(
     username: string,
     password: string,
