@@ -20,10 +20,12 @@ export function SignInForm({ userData, signIn }: Props) {
     emailRequired: null,
     passwordRequired: null,
   });
-  const [email, setEmail] = React.useState<string>(userData.username);
+  const [email, setEmail] = React.useState<string>(userData?.username ?? '');
   const [name, domain] = email.split('@');
   const maskedEmail = `${name[0]}******@${domain}`;
-  const [password, setPassword] = React.useState<string>(userData.password);
+  const [password, setPassword] = React.useState<string>(
+    userData?.password ?? ''
+  );
   const mounted = React.useRef<boolean>(false);
 
   const handleEmailChange = React.useCallback(
@@ -116,7 +118,7 @@ export function SignInForm({ userData, signIn }: Props) {
           <Trans i18nKey="importEmail.emailLabel" />
         </div>
 
-        {userData.username ? (
+        {userData?.username ? (
           <Input data-testid="emailInput" value={maskedEmail} disabled />
         ) : (
           <Input
@@ -147,7 +149,7 @@ export function SignInForm({ userData, signIn }: Props) {
           onChange={handlePasswordChange}
           onBlur={handlePasswordBlur}
           error={errors.passwordRequired}
-          autoFocus={userData.username}
+          autoFocus={userData?.username}
         />
         <Error show={errors.passwordRequired != null}>
           {errors.passwordRequired}
@@ -179,7 +181,7 @@ export function SignInForm({ userData, signIn }: Props) {
           <Trans i18nKey="importEmail.forgotPassword" />
         </a>
 
-        {!userData.username && (
+        {!userData?.username && (
           <div>
             <Trans i18nKey="importEmail.dontHaveAccount" />
             &nbsp;
