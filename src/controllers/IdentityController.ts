@@ -14,7 +14,7 @@ import { WxWalletInput } from '../wallets/wx';
 export type IdentityUser = {
   address: string;
   publicKey: string;
-  username: string;
+  uuid: string; // cognito user identifier
 };
 
 export type CodeDelivery = {
@@ -271,7 +271,7 @@ export class IdentityController {
         {
           onSuccess: async () => {
             this.identityUser = await this.fetchIdentityUser();
-            this.identityUser.username = this.currentUser.getUsername();
+            this.identityUser.uuid = this.currentUser.getUsername();
             this.currentUser = undefined;
 
             delete user['challengeName'];
@@ -340,7 +340,7 @@ export class IdentityController {
 
             if (session && !this.identityUser) {
               this.identityUser = await this.fetchIdentityUser();
-              this.identityUser.username = this.currentUser.getUsername();
+              this.identityUser.uuid = this.currentUser.getUsername();
               this.currentUser = undefined;
 
               resolve();
@@ -381,7 +381,7 @@ export class IdentityController {
   }
 
   updateSession() {
-    this.persistSession(this.getSelectedAccount().username);
+    this.persistSession(this.getSelectedAccount().uuid);
     this.clearSession();
   }
 
@@ -486,7 +486,7 @@ export class IdentityController {
   }
 
   async signBytes(bytes: Array<number> | Uint8Array): Promise<string> {
-    const userId = this.getSelectedAccount().username;
+    const userId = this.getSelectedAccount().uuid;
     await this.restoreSession(userId);
 
     const signature = libs.crypto.base58Decode(

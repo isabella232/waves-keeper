@@ -9,7 +9,7 @@ export interface Account {
   networkCode: string;
   publicKey: string;
   type: AccountType;
-  username?: string;
+  uuid?: string;
 }
 
 export type KeystoreAccount = Pick<
@@ -20,7 +20,7 @@ export type KeystoreAccount = Pick<
     | { type?: 'seed'; seed: string }
     | { type: 'encodedSeed'; encodedSeed: string }
     | { type: 'privateKey'; privateKey: string }
-    | { type: 'wx'; publicKey: string; address: string }
+    | { type: 'wx'; publicKey: string; address: string; uuid: string }
   );
 
 export type KeystoreProfiles = Record<

@@ -41,7 +41,10 @@ export function Login({ className = '', userData, onConfirm }: LoginProps) {
   const handleSuccess = React.useCallback(() => {
     background.identityUser().then((identityUser: IdentityUser) => {
       const [name, domain] = userRef.current.username.split('@');
-      onConfirm({ ...identityUser, name: `${name[0]}*******@${domain}` });
+      onConfirm({
+        name: `${name[0]}*******@${domain}`,
+        ...identityUser,
+      });
     });
   }, [is2FAEnabled, onConfirm]);
 

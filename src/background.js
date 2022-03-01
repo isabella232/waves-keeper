@@ -326,12 +326,12 @@ class BackgroundService extends EventEmitter {
       .on('addWallet', wallet => {
         if (wallet.getAccount().type === 'wx') {
           // persist current session to storage
-          this.identityController.persistSession(wallet.getAccount().username);
+          this.identityController.persistSession(wallet.getAccount().uuid);
         }
       })
       .on('removeWallet', wallet => {
         if (wallet.getAccount().type === 'wx') {
-          this.identityController.removeSession(wallet.getAccount().username);
+          this.identityController.removeSession(wallet.getAccount().uuid);
         }
       });
 

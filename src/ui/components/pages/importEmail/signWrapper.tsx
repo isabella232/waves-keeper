@@ -27,7 +27,7 @@ export function SignWrapper({ onConfirm, children }: Props) {
 
     setPending(true);
     background
-      .identityRestore(account.username)
+      .identityRestore(account.uuid)
       .then(() => {
         onConfirm();
       })
