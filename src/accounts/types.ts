@@ -10,6 +10,7 @@ export interface Account {
   publicKey: string;
   type: AccountType;
   uuid?: string;
+  username?: string;
 }
 
 export type KeystoreAccount = Pick<

@@ -13,12 +13,14 @@
     "copyToClipboard": "Click to copy to clipboard",
     "encodedSeed": "Encoded seed",
     "enter": "Enter",
+    "email": "Email",
     "modal": {
       "error": "Incorrect password"
     },
     "password": "Password",
     "passwordError": "Incorrect password",
     "privateKeyNoBackupPhrase": "This account was imported using private key, so there's no backup phrase to copy",
+    "emailNoBackupPhrase": "This account was imported using the Waves.Exchange account, so there is no backup phrase or private key to copy",
     "privKey": "Private key",
     "pubKey": "Public key",
     "seed": "Backup phrase",

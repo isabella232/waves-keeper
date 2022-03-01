@@ -17,12 +17,14 @@ export interface WxWalletInput {
   publicKey: string;
   address: string;
   uuid: string;
+  username: string;
 }
 
 interface WxWalletData extends Account {
   publicKey: string;
   address: string;
   uuid: string;
+  username: string;
 }
 
 export class WxWallet extends Wallet<WxWalletData> {
@@ -30,7 +32,15 @@ export class WxWallet extends Wallet<WxWalletData> {
   private identity: IdentityController;
 
   constructor(
-    { name, network, networkCode, publicKey, address, uuid }: WxWalletInput,
+    {
+      name,
+      network,
+      networkCode,
+      publicKey,
+      address,
+      uuid,
+      username,
+    }: WxWalletInput,
     identity: IdentityController
   ) {
     super({
@@ -40,6 +50,7 @@ export class WxWallet extends Wallet<WxWalletData> {
       networkCode,
       publicKey,
       uuid,
+      username,
       type: 'wx',
     });
 
@@ -52,7 +63,11 @@ export class WxWallet extends Wallet<WxWalletData> {
   }
 
   getAccount(): WxWalletData {
-    return { uuid: this.data.uuid, ...super.getAccount() };
+    return {
+      uuid: this.data.uuid,
+      username: this.data.username,
+      ...super.getAccount(),
+    };
   }
 
   getSeed(): string {

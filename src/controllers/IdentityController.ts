@@ -15,6 +15,7 @@ export type IdentityUser = {
   address: string;
   publicKey: string;
   uuid: string; // cognito user identifier
+  username: string; // wx email
 };
 
 export type CodeDelivery = {
@@ -162,8 +163,10 @@ export class IdentityController {
   // identity properties
   private readonly seed = seedUtils.Seed.create();
   private userPool: CognitoUserPool | undefined = undefined;
-  private currentUser: CognitoUser | undefined = undefined;
-  private identityUser: IdentityUser | undefined = undefined;
+  private user: CognitoUser | undefined = undefined;
+  private userData: { username: string; password: string } | undefined =
+    undefined;
+  private identity: IdentityUser | undefined = undefined;
   store: IdentityStorage;
 
   constructor(opts: Options) {
@@ -257,9 +260,10 @@ export class IdentityController {
         Storage: this.store,
       });
 
-      this.currentUser = user;
+      this.user = user;
+      this.userData = { username, password };
 
-      this.currentUser.authenticateUser(
+      this.user.authenticateUser(
         new AuthenticationDetails({
           Username: username,
           Password: password,
@@ -270,9 +274,11 @@ export class IdentityController {
         }),
         {
           onSuccess: async () => {
-            this.identityUser = await this.fetchIdentityUser();
-            this.identityUser.uuid = this.currentUser.getUsername();
-            this.currentUser = undefined;
+            this.identity = await this.fetchIdentityUser();
+            this.identity.uuid = this.user.getUsername();
+            this.identity.username = this.userData.username;
+            this.user = undefined;
+            this.userData = undefined;
 
             delete user['challengeName'];
             delete user['challengeParam'];
@@ -325,23 +331,25 @@ export class IdentityController {
     mfaType: MFAType = 'SOFTWARE_TOKEN_MFA'
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (!this.currentUser) {
+      if (!this.user) {
         return reject(new Error('Not authenticated'));
       }
 
-      this.currentUser.sendMFACode(
+      this.user.sendMFACode(
         code,
         {
           onSuccess: async session => {
-            if (this.currentUser) {
-              delete this.currentUser['challengeName'];
-              delete this.currentUser['challengeParam'];
+            if (this.user) {
+              delete this.user['challengeName'];
+              delete this.user['challengeParam'];
             }
 
-            if (session && !this.identityUser) {
-              this.identityUser = await this.fetchIdentityUser();
-              this.identityUser.uuid = this.currentUser.getUsername();
-              this.currentUser = undefined;
+            if (session && !this.identity) {
+              this.identity = await this.fetchIdentityUser();
+              this.identity.uuid = this.user.getUsername();
+              this.identity.username = this.userData.username;
+              this.user = undefined;
+              this.userData = undefined;
 
               resolve();
             }
@@ -373,7 +381,7 @@ export class IdentityController {
   }
 
   getIdentityUser(): IdentityUser {
-    return this.identityUser;
+    return this.identity;
   }
 
   persistSession(userId: string) {
@@ -389,13 +397,13 @@ export class IdentityController {
     this.clearSession();
     // set current user session
     this.store.restore(userId);
-    this.currentUser = this.userPool.getCurrentUser();
+    this.user = this.userPool.getCurrentUser();
     // restores user session tokens from storage
     return new Promise((resolve, reject) => {
-      if (!this.currentUser) {
+      if (!this.user) {
         reject(new Error('Not authenticated'));
       }
-      this.currentUser.getSession((err, session) => {
+      this.user.getSession((err, session) => {
         if (err) {
           reject(err);
         }
@@ -429,11 +437,11 @@ export class IdentityController {
     const meta = { 'custom:encryptionKey': this.seed.keyPair.publicKey };
 
     return new Promise<any>((resolve, reject) => {
-      if (!this.currentUser) {
+      if (!this.user) {
         return reject(new Error('Not authenticated'));
       }
 
-      this.currentUser.updateAttributes(
+      this.user.updateAttributes(
         [
           new CognitoUserAttribute({
             Name: 'custom:encryptionKey',
@@ -445,11 +453,11 @@ export class IdentityController {
             return reject(err);
           }
 
-          if (!this.currentUser) {
+          if (!this.user) {
             return reject(new Error('Not authenticated'));
           }
 
-          const session = this.currentUser.getSignInUserSession();
+          const session = this.user.getSignInUserSession();
 
           if (!session) {
             return reject(new Error('Not authenticated'));
@@ -457,7 +465,7 @@ export class IdentityController {
 
           const refreshToken = session.getRefreshToken();
 
-          this.currentUser.refreshSession(
+          this.user.refreshSession(
             refreshToken,
             (err, data) => {
               if (err) {
@@ -475,8 +483,9 @@ export class IdentityController {
   }
 
   clearSession() {
-    this.currentUser = undefined;
-    this.identityUser = undefined;
+    this.user = undefined;
+    this.userData = undefined;
+    this.identity = undefined;
     this.store.clear();
   }
 
@@ -526,11 +535,11 @@ export class IdentityController {
   }
 
   private getIdToken(): CognitoIdToken {
-    if (!this.currentUser) {
+    if (!this.user) {
       throw new Error('Not authenticated');
     }
 
-    const session = this.currentUser.getSignInUserSession();
+    const session = this.user.getSignInUserSession();
 
     if (!session) {
       throw new Error('Not authenticated');

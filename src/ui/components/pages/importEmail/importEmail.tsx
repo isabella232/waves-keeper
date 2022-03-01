@@ -42,6 +42,7 @@ export function ImportEmail({ setTab }: Props) {
           address: userData.address,
           publicKey: userData.publicKey,
           uuid: userData.uuid,
+          username: userData.username,
           hasBackup: true,
         })
       );

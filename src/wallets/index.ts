@@ -43,6 +43,7 @@ export function createWallet(
           publicKey: input.publicKey,
           address: input.address,
           uuid: input.uuid,
+          username: input.username,
         },
         identity
       );
